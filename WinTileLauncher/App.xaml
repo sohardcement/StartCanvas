@@ -1,0 +1,95 @@
+<Application x:Class="WinTileLauncher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI</FontFamily>
+        <SolidColorBrush x:Key="TextPrimary" Color="#FFF8FBFF" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#BFD7E7F6" />
+        <SolidColorBrush x:Key="GlassBrush" Color="#8C10263D" />
+        <SolidColorBrush x:Key="GlassHoverBrush" Color="#B42A4964" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        </Style>
+
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType=Button}}"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent" BorderThickness="1" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#24DFF4FF" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#28FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#3A9FD5FF" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RailLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="SearchBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#181E3D56" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CaretBrush" Value="White" />
+            <Setter Property="BorderBrush" Value="#34E0F3FF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="42,10,14,10" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#86CDEBFF" />
+                                <Setter TargetName="Border" Property="Background" Value="#28345A75" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Application.Resources>
+</Application>

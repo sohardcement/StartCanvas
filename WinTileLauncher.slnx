@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WinTileLauncher/WinTileLauncher.csproj" />
+  <Project Path="WinTileLauncher.Verifier/WinTileLauncher.Verifier.csproj" />
+</Solution>
