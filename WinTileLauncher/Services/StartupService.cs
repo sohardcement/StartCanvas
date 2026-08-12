@@ -12,9 +12,45 @@ internal static class StartupService
         try
         {
             using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, false);
-            return key?.GetValue(ValueName) is string value && !string.IsNullOrWhiteSpace(value);
+            return IsCommandForExecutable(
+                key?.GetValue(ValueName) as string,
+                Environment.ProcessPath);
         }
         catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    internal static bool IsCommandForExecutable(string? command, string? executablePath)
+    {
+        if (string.IsNullOrWhiteSpace(command) || string.IsNullOrWhiteSpace(executablePath))
+            return false;
+
+        var trimmed = command.Trim();
+        string registeredPath;
+        if (trimmed.StartsWith('"'))
+        {
+            var closingQuote = trimmed.IndexOf('"', 1);
+            if (closingQuote <= 1)
+                return false;
+            if (closingQuote + 1 < trimmed.Length &&
+                !char.IsWhiteSpace(trimmed[closingQuote + 1]))
+                return false;
+            registeredPath = trimmed[1..closingQuote];
+        }
+        else
+        {
+            var separator = trimmed.IndexOfAny([' ', '\t', '\r', '\n']);
+            registeredPath = separator < 0 ? trimmed : trimmed[..separator];
+        }
+
+        try
+        {
+            return Path.GetFullPath(registeredPath)
+                .Equals(Path.GetFullPath(executablePath), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             return false;
         }

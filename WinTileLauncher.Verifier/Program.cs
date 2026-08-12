@@ -11,6 +11,10 @@ var checks = new (string Name, Func<bool> Run)[]
     ("Windows key alone and Win+R / Win+I forwarding", GlobalKeyboardHook.RunStateMachineSelfTest),
     ("App discovery defers icon loading until rows are visible", VerifyLazyAppIcons),
     ("All Apps drawer stays responsive across display widths", VerifyDrawerWidth),
+    ("Explicitly empty and malformed tile layouts remain empty", VerifyEmptyLayoutPersistence),
+    ("Keyboard app launch respects the current selection", VerifyKeyboardLaunchSelection),
+    ("Global undo preserves text editing and tile order", VerifyUndoBehavior),
+    ("Startup registration must point to the current executable", VerifyStartupRegistration),
     ("Legacy folders flatten without losing apps", VerifyFolderMigration),
     ("Tiles keep free grid positions within and across groups", VerifyTilePlacement),
     ("Blank horizontal space creates a positioned group", VerifyBlankSpaceGroup),
@@ -54,6 +58,60 @@ static bool VerifyDrawerWidth()
     return (double)converter.Convert(800d, typeof(double), null!, CultureInfo.InvariantCulture) == 440 &&
            (double)converter.Convert(1200d, typeof(double), null!, CultureInfo.InvariantCulture) == 576 &&
            (double)converter.Convert(2000d, typeof(double), null!, CultureInfo.InvariantCulture) == 720;
+}
+
+static bool VerifyEmptyLayoutPersistence()
+{
+    var empty = new LayoutData { Version = 1, Tiles = [] };
+    var malformed = LayoutService.NormalizeLoadedLayout(new LayoutData { Tiles = null! });
+    var legacyTile = Tile("legacy", "Legacy", "legacy.exe", "Legacy", 0);
+    var legacyClock = new TileLayoutItem { Kind = TileKind.Clock };
+    return MainWindow.ShouldSeedDefaultLayout(null) &&
+           !MainWindow.ShouldSeedDefaultLayout(empty) &&
+           !MainWindow.ShouldAddLegacyClock(empty, empty.Tiles) &&
+           MainWindow.ShouldAddLegacyClock(empty, [legacyTile]) &&
+           !MainWindow.ShouldAddLegacyClock(empty, [legacyTile, legacyClock]) &&
+           malformed is { Tiles.Count: 0 };
+}
+
+static bool VerifyKeyboardLaunchSelection()
+{
+    var first = new LauncherItem { Id = "first-app", Name = "First", Target = "first.exe" };
+    var selected = new LauncherItem { Id = "selected-app", Name = "Selected", Target = "selected.exe" };
+    return ReferenceEquals(MainWindow.SelectAppForKeyboardLaunch(selected, [first, selected]), selected) &&
+           ReferenceEquals(MainWindow.SelectAppForKeyboardLaunch(null, [first, selected]), first) &&
+           MainWindow.SelectAppForKeyboardLaunch(null, []) is null;
+}
+
+static bool VerifyUndoBehavior()
+{
+    var first = Tile("undo-first", "First", "first.exe", "Undo", 0);
+    var restored = Tile("undo-restored", "Restored", "restored.exe", "Undo", 1);
+    var last = Tile("undo-last", "Last", "last.exe", "Undo", 1);
+    var tiles = new List<TileLayoutItem> { first, last };
+    var index = MainWindow.RestoreTileAtIndex(tiles, restored, 1);
+
+    return MainWindow.ShouldHandleGlobalUndo(true, false) &&
+           !MainWindow.ShouldHandleGlobalUndo(true, true) &&
+           !MainWindow.ShouldHandleGlobalUndo(false, false) &&
+           index == 1 && tiles.Select(tile => tile.Id)
+               .SequenceEqual(["undo-first", "undo-restored", "undo-last"]) &&
+           tiles.Select(tile => tile.Order).SequenceEqual([0, 1, 2]);
+}
+
+static bool VerifyStartupRegistration()
+{
+    const string executable = @"C:\Program Files\Tile10\Tile10.exe";
+    return StartupService.IsCommandForExecutable(
+               @"""C:\Program Files\Tile10\Tile10.exe"" --background", executable) &&
+           StartupService.IsCommandForExecutable(
+               @"""c:\program files\tile10\tile10.exe"" --background", executable) &&
+           !StartupService.IsCommandForExecutable(
+               @"""C:\Old Tile10\Tile10.exe"" --background", executable) &&
+           !StartupService.IsCommandForExecutable(
+               @"""C:\Program Files\Tile10\Tile10.exe""evil", executable) &&
+           !StartupService.IsCommandForExecutable("\"unterminated", executable) &&
+           !StartupService.IsCommandForExecutable(null, executable);
 }
 
 static bool VerifyFolderMigration()

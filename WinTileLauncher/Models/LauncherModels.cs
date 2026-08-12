@@ -33,6 +33,7 @@ public enum TileKind
 public sealed class LauncherItem : INotifyPropertyChanged
 {
     private ImageSource? _icon;
+    private bool _isPinned;
 
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
     public string Name { get; init; } = string.Empty;
@@ -64,6 +65,29 @@ public sealed class LauncherItem : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Icon)));
         }
     }
+
+    [JsonIgnore]
+    public bool IsPinned
+    {
+        get => _isPinned;
+        set
+        {
+            if (_isPinned == value)
+                return;
+            _isPinned = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsPinned)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PinActionAccessibleName)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PinActionToolTip)));
+        }
+    }
+
+    [JsonIgnore]
+    public string PinActionAccessibleName => IsPinned
+        ? $"已固定到开始屏幕：{Name}"
+        : $"固定到开始屏幕：{Name}";
+
+    [JsonIgnore]
+    public string PinActionToolTip => IsPinned ? "已固定到开始屏幕" : "固定到开始屏幕";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 }

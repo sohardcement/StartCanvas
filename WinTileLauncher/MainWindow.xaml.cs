@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
@@ -67,6 +68,10 @@ public partial class MainWindow : Window, IDisposable
     private bool _isHiding;
     private bool _windowedTestMode;
     private double _canvasZoom = 1;
+    private TileLayoutItem? _pendingUnpinnedTile;
+    private int _pendingUnpinnedIndex = -1;
+
+    private static bool AnimationsEnabled => SystemParameters.ClientAreaAnimation;
 
     public MainWindow()
     {
@@ -88,10 +93,12 @@ public partial class MainWindow : Window, IDisposable
         _liveTileTimer.Tick += (_, _) => UpdateLiveTiles();
         _liveTileTimer.Start();
 
-        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
         _statusTimer.Tick += (_, _) =>
         {
             StatusText.Text = string.Empty;
+            StatusToast.Visibility = Visibility.Collapsed;
+            ClearPendingUnpin();
             _statusTimer.Stop();
         };
     }
@@ -140,11 +147,11 @@ public partial class MainWindow : Window, IDisposable
 
             var savedLayout = _layoutService.Load();
             SetCanvasZoom(savedLayout?.CanvasZoom ?? 1);
-            var rawTiles = savedLayout?.Tiles is { Count: > 0 }
-                ? savedLayout.Tiles
-                : CreateDefaultLayout(_apps);
+            var rawTiles = ShouldSeedDefaultLayout(savedLayout)
+                ? CreateDefaultLayout(_apps)
+                : savedLayout!.Tiles;
 
-            if (savedLayout is { Version: < 2 } && rawTiles.All(tile => tile.Kind != TileKind.Clock))
+            if (ShouldAddLegacyClock(savedLayout, rawTiles))
                 rawTiles.Add(CreateClockTile(rawTiles.Count));
 
             if (savedLayout is { Version: < 11 })
@@ -160,11 +167,21 @@ public partial class MainWindow : Window, IDisposable
             }
 
             UpdateLiveTiles();
+            UpdatePinnedAppStates();
             RenumberAndSave();
             LoadingPanel.Visibility = Visibility.Collapsed;
+            UpdatePinnedEmptyState();
+            UpdateSearchEmptyState();
             SetStatus($"已找到 {_apps.Count} 个应用");
         });
     }
+
+    internal static bool ShouldSeedDefaultLayout(LayoutData? savedLayout) => savedLayout is null;
+
+    internal static bool ShouldAddLegacyClock(LayoutData? savedLayout,
+        IReadOnlyCollection<TileLayoutItem> tiles) =>
+        savedLayout is { Version: < 2 } && tiles.Count > 0 &&
+        tiles.All(tile => tile.Kind != TileKind.Clock);
 
     private static List<TileLayoutItem> CreateDefaultLayout(IReadOnlyList<LauncherItem> apps)
     {
@@ -286,12 +303,16 @@ public partial class MainWindow : Window, IDisposable
         Keyboard.Focus(this);
 
         TilesItems.UpdateLayout();
-        AnimateTilesIn();
+        if (AnimationsEnabled)
+            AnimateTilesIn();
 
         LauncherRoot.Opacity = 1;
         LauncherScale.ScaleX = 1;
         LauncherScale.ScaleY = 1;
         LauncherTranslate.Y = 0;
+
+        if (!AnimationsEnabled)
+            return;
 
         var rootDuration = TimeSpan.FromMilliseconds(460);
         var ease = new QuinticEase { EasingMode = EasingMode.EaseOut };
@@ -315,6 +336,18 @@ public partial class MainWindow : Window, IDisposable
         SearchHost.Visibility = Visibility.Collapsed;
         SearchBox.Clear();
         ClearTileEntryAnimations();
+
+        if (!AnimationsEnabled)
+        {
+            Hide();
+            ClearLauncherAnimations();
+            LauncherRoot.Opacity = 1;
+            LauncherScale.ScaleX = 1;
+            LauncherScale.ScaleY = 1;
+            LauncherTranslate.Y = 0;
+            _isHiding = false;
+            return;
+        }
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
         var duration = TimeSpan.FromMilliseconds(135);
@@ -412,6 +445,18 @@ public partial class MainWindow : Window, IDisposable
 
     private static void AnimateViewIn(FrameworkElement element, double offset = 14)
     {
+        if (!AnimationsEnabled)
+        {
+            element.BeginAnimation(OpacityProperty, null);
+            element.Opacity = 1;
+            if (element.RenderTransform is TranslateTransform existingTranslate)
+            {
+                existingTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+                existingTranslate.Y = 0;
+            }
+            return;
+        }
+
         var ease = new QuinticEase { EasingMode = EasingMode.EaseOut };
         element.Opacity = 1;
         element.BeginAnimation(OpacityProperty,
@@ -439,6 +484,15 @@ public partial class MainWindow : Window, IDisposable
         AppsCountText.Text = SearchBox.Text.Length == 0
             ? $"{_apps.Count} 个应用"
             : $"{AppsList.Items.Count} 个结果";
+        if (AppsList.Items.Count == 0)
+        {
+            AppsList.SelectedIndex = -1;
+        }
+        else if (AppsList.SelectedItem is not LauncherItem selected || !AppsList.Items.Contains(selected))
+        {
+            AppsList.SelectedIndex = 0;
+        }
+        UpdateSearchEmptyState();
     }
 
     private void ClearSearch_Click(object sender, RoutedEventArgs e)
@@ -449,11 +503,53 @@ public partial class MainWindow : Window, IDisposable
 
     private void SearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || AppsList.Items.Count == 0)
+        if (e.Key is Key.Down or Key.Up)
+        {
+            MoveAppSelection(e.Key == Key.Down ? 1 : -1);
+            e.Handled = true;
             return;
-        if (AppsList.Items[0] is LauncherItem item)
+        }
+
+        if (e.Key != Key.Enter)
+            return;
+
+        var item = SelectAppForKeyboardLaunch(
+            AppsList.SelectedItem as LauncherItem,
+            AppsList.Items.OfType<LauncherItem>());
+        if (item is not null)
             Launch(item);
         e.Handled = true;
+    }
+
+    private void MoveAppSelection(int direction)
+    {
+        if (AppsList.Items.Count == 0)
+            return;
+
+        var current = AppsList.SelectedIndex;
+        var next = current < 0
+            ? (direction > 0 ? 0 : AppsList.Items.Count - 1)
+            : Math.Clamp(current + direction, 0, AppsList.Items.Count - 1);
+        AppsList.SelectedIndex = next;
+        AppsList.ScrollIntoView(AppsList.SelectedItem);
+    }
+
+    internal static LauncherItem? SelectAppForKeyboardLaunch(
+        LauncherItem? selected, IEnumerable<LauncherItem> visibleApps) =>
+        selected ?? visibleApps.FirstOrDefault();
+
+    private void UpdateSearchEmptyState()
+    {
+        var isEmpty = LoadingPanel.Visibility == Visibility.Collapsed && AppsList.Items.Count == 0;
+        EmptySearchState.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
+        if (!isEmpty)
+            return;
+
+        var searching = !string.IsNullOrWhiteSpace(SearchBox.Text);
+        EmptySearchTitle.Text = searching ? "没有找到匹配的应用" : "暂时没有发现应用";
+        EmptySearchDescription.Text = searching
+            ? "尝试更短的名称或检查拼写"
+            : "安装的应用会在完成扫描后显示在这里";
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -467,6 +563,22 @@ public partial class MainWindow : Window, IDisposable
 
         if (e.Key == Key.Escape)
         {
+            if (Keyboard.FocusedElement is TextBox { Tag: string oldGroupName } groupNameEditor)
+            {
+                groupNameEditor.Text = oldGroupName;
+                Keyboard.ClearFocus();
+                e.Handled = true;
+                return;
+            }
+
+            if (AppsPanel.Visibility == Visibility.Visible && SearchBox.Text.Length > 0)
+            {
+                SearchBox.Clear();
+                SearchBox.Focus();
+                e.Handled = true;
+                return;
+            }
+
             if (AppsPanel.Visibility == Visibility.Visible)
             {
                 ShowPinnedTiles();
@@ -486,6 +598,15 @@ public partial class MainWindow : Window, IDisposable
             return;
         }
 
+        if (e.Key == Key.Z && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) &&
+            ShouldHandleGlobalUndo(_pendingUnpinnedTile is not null,
+                Keyboard.FocusedElement is TextBoxBase))
+        {
+            UndoPendingUnpin();
+            e.Handled = true;
+            return;
+        }
+
         if (Keyboard.FocusedElement == this && e.Key >= Key.A && e.Key <= Key.Z)
         {
             OpenSearch();
@@ -494,6 +615,9 @@ public partial class MainWindow : Window, IDisposable
             e.Handled = true;
         }
     }
+
+    internal static bool ShouldHandleGlobalUndo(bool hasPendingUndo, bool focusIsTextEditable) =>
+        hasPendingUndo && !focusIsTextEditable;
 
     private void TilesScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -556,13 +680,21 @@ public partial class MainWindow : Window, IDisposable
         SetStatus("画布缩放已恢复为 100%");
     }
 
-    private void Window_Deactivated(object? sender, EventArgs e)
+    private async void Window_Deactivated(object? sender, EventArgs e)
     {
         if (_isPointerDragging)
             CancelPointerDrag();
         if (_windowedTestMode)
             return;
-        Dispatcher.BeginInvoke(() =>
+
+        var transition = _transitionVersion;
+        var remainingGracePeriod = _ignoreDeactivationUntil - DateTime.UtcNow;
+        if (remainingGracePeriod > TimeSpan.Zero)
+            await Task.Delay(remainingGracePeriod + TimeSpan.FromMilliseconds(30));
+
+        if (transition != _transitionVersion)
+            return;
+        await Dispatcher.InvokeAsync(() =>
         {
             if (IsVisible && !IsActive && !_transientUiOpen && DateTime.UtcNow >= _ignoreDeactivationUntil)
                 HideLauncher();
@@ -584,6 +716,8 @@ public partial class MainWindow : Window, IDisposable
         SearchHost.Visibility = Visibility.Visible;
         DateText.Visibility = Visibility.Visible;
         AppsPanelTitle.Text = "所有应用";
+        UpdateNavigationState(true);
+        PinnedEmptyState.Visibility = Visibility.Collapsed;
         var wasVisible = AppsPanel.Visibility == Visibility.Visible;
         AppsPanel.Visibility = Visibility.Visible;
         SetTileCanvasBehindDrawer(true);
@@ -607,8 +741,29 @@ public partial class MainWindow : Window, IDisposable
         AppsPanel.Visibility = Visibility.Collapsed;
         SetTileCanvasBehindDrawer(false);
         DateText.Visibility = Visibility.Visible;
+        UpdateNavigationState(false);
+        UpdatePinnedEmptyState();
         if (clearSearch)
             AnimateViewIn(TilesScroll, 8);
+    }
+
+    private void UpdateNavigationState(bool appsOpen)
+    {
+        PinnedNavigationButton.Tag = appsOpen ? null : "Selected";
+        AppsNavigationButton.Tag = appsOpen ? "Selected" : null;
+        PageTitleText.Text = appsOpen ? "应用" : "开始";
+        PageSubtitleText.Text = appsOpen
+            ? "查找、启动或固定应用"
+            : "你的空间，按你的方式排列";
+    }
+
+    private void UpdatePinnedEmptyState()
+    {
+        PinnedEmptyState.Visibility = _tiles.Count == 0 &&
+                                      LoadingPanel.Visibility == Visibility.Collapsed &&
+                                      AppsPanel.Visibility != Visibility.Visible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void CloseApps_Click(object sender, RoutedEventArgs e)
@@ -639,6 +794,18 @@ public partial class MainWindow : Window, IDisposable
 
     private static void AnimateDrawerIn(FrameworkElement element, double offset = 24)
     {
+        if (!AnimationsEnabled)
+        {
+            element.BeginAnimation(OpacityProperty, null);
+            element.Opacity = 1;
+            if (element.RenderTransform is TranslateTransform existingTranslate)
+            {
+                existingTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+                existingTranslate.X = 0;
+            }
+            return;
+        }
+
         var ease = new QuinticEase { EasingMode = EasingMode.EaseOut };
         element.Opacity = 1;
         element.BeginAnimation(OpacityProperty,
@@ -692,10 +859,20 @@ public partial class MainWindow : Window, IDisposable
 
     private void GroupName_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter)
+        if (sender is not TextBox { Tag: string oldName } textBox)
             return;
-        Keyboard.ClearFocus();
-        e.Handled = true;
+
+        if (e.Key == Key.Escape)
+        {
+            textBox.Text = oldName;
+            Keyboard.ClearFocus();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            Keyboard.ClearFocus();
+            e.Handled = true;
+        }
     }
 
     private void GroupName_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -710,6 +887,13 @@ public partial class MainWindow : Window, IDisposable
         }
         if (newName.Equals(oldName, StringComparison.CurrentCulture))
             return;
+        if (_tiles.Any(tile => !tile.Group.Equals(oldName, StringComparison.CurrentCulture) &&
+                               tile.Group.Equals(newName, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            textBox.Text = oldName;
+            SetStatus($"分组“{newName}”已存在，请使用其他名称");
+            return;
+        }
 
         foreach (var tile in _tiles.Where(tile => tile.Group.Equals(oldName, StringComparison.CurrentCulture)))
             tile.Group = newName;
@@ -724,8 +908,21 @@ public partial class MainWindow : Window, IDisposable
 
     private void AppsList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (AppsList.SelectedItem is LauncherItem item)
+        if (FindVisualAncestor<Button>(e.OriginalSource as DependencyObject) is not null)
+            return;
+        var row = FindVisualAncestor<ListBoxItem>(e.OriginalSource as DependencyObject);
+        if (row?.DataContext is LauncherItem item)
             Launch(item);
+    }
+
+    private void AppsList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (FindVisualAncestor<Button>(e.OriginalSource as DependencyObject) is not null)
+            return;
+        if (e.Key != Key.Enter || AppsList.SelectedItem is not LauncherItem item)
+            return;
+        Launch(item);
+        e.Handled = true;
     }
 
     private void PinApp_Click(object sender, RoutedEventArgs e)
@@ -733,7 +930,7 @@ public partial class MainWindow : Window, IDisposable
         if (sender is not Button { Tag: LauncherItem item })
             return;
 
-        if (_tiles.Any(tile => ContainsTarget(tile, item.Target, item.Arguments)))
+        if (item.IsPinned || _tiles.Any(tile => ContainsTarget(tile, item.Target, item.Arguments)))
         {
             SetStatus($"“{item.Name}”已经固定");
             return;
@@ -756,8 +953,15 @@ public partial class MainWindow : Window, IDisposable
         LayoutRules.ResolveGroupColumns(_tiles);
         LayoutRules.ResolveGroupLayout(_tiles, "我的应用");
         _tileView.Refresh();
+        UpdatePinnedAppStates();
         RenumberAndSave();
         SetStatus($"已固定“{item.Name}”");
+    }
+
+    private void UpdatePinnedAppStates()
+    {
+        foreach (var app in _apps)
+            app.IsPinned = _tiles.Any(tile => ContainsTarget(tile, app.Target, app.Arguments));
     }
 
     private static bool ContainsTarget(TileLayoutItem tile, string target, string arguments)
@@ -1149,6 +1353,8 @@ public partial class MainWindow : Window, IDisposable
     private void AnimateTileReflow(IReadOnlyDictionary<string, Point> previousPositions)
     {
         TilesItems.UpdateLayout();
+        if (!AnimationsEnabled)
+            return;
         var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
         foreach (var border in FindVisualChildren<Border>(TilesItems)
                      .Where(border => border.Tag is TileLayoutItem))
@@ -1323,6 +1529,29 @@ public partial class MainWindow : Window, IDisposable
         _suppressTileLaunchUntil = DateTime.UtcNow.AddMilliseconds(500);
     }
 
+    private void GroupResize_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not Thumb { Tag: string groupName } ||
+            e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down) ||
+            _tiles.FirstOrDefault(item => item.Group.Equals(groupName, StringComparison.Ordinal))
+                is not { } tile)
+            return;
+
+        var columns = tile.GroupWidthColumns + (e.Key == Key.Right ? 1 : e.Key == Key.Left ? -1 : 0);
+        var rows = tile.GroupHeightRows + (e.Key == Key.Down ? 1 : e.Key == Key.Up ? -1 : 0);
+        if (LayoutRules.SetGroupSize(_tiles, groupName, columns, rows))
+        {
+            InvalidatePositionPanels();
+            if (RenumberAndSave())
+                SetStatus($"“{groupName}”已调整为 {tile.GroupWidthColumns} 列 × {tile.GroupHeightRows} 行");
+        }
+        else
+        {
+            SetStatus($"“{groupName}”已经是当前可用尺寸");
+        }
+        e.Handled = true;
+    }
+
     private void GroupResize_DragDelta(object sender, DragDeltaEventArgs e)
     {
         if (_resizingGroup is null)
@@ -1485,6 +1714,8 @@ public partial class MainWindow : Window, IDisposable
     private void AnimateTileResize(TileLayoutItem tile, double previousWidth, double previousHeight)
     {
         TilesItems.UpdateLayout();
+        if (!AnimationsEnabled)
+            return;
         var border = FindVisualChildren<Border>(TilesItems)
             .FirstOrDefault(candidate => ReferenceEquals(candidate.Tag, tile));
         if (border is null)
@@ -1521,10 +1752,94 @@ public partial class MainWindow : Window, IDisposable
     {
         if (sender is not MenuItem { DataContext: TileLayoutItem tile })
             return;
+        var removedIndex = _tiles.IndexOf(tile);
+        if (removedIndex < 0)
+            return;
         _tiles.Remove(tile);
         _tileView.Refresh();
-        RenumberAndSave();
-        SetStatus($"已取消固定“{tile.Name}”");
+        UpdatePinnedAppStates();
+        if (!RenumberAndSave())
+        {
+            RestoreTileAtIndex(_tiles, tile, removedIndex);
+            _tileView.Refresh();
+            UpdatePinnedAppStates();
+            UpdatePinnedEmptyState();
+            return;
+        }
+        _pendingUnpinnedTile = tile;
+        _pendingUnpinnedIndex = removedIndex;
+        UpdatePinnedEmptyState();
+        SetStatus($"已取消固定“{tile.Name}” · 可按 Ctrl+Z 撤销", showUndo: true);
+    }
+
+    private void UndoUnpin_Click(object sender, RoutedEventArgs e)
+    {
+        UndoPendingUnpin();
+    }
+
+    private void UndoPendingUnpin()
+    {
+        if (_pendingUnpinnedTile is not { } tile)
+            return;
+
+        var index = Math.Clamp(_pendingUnpinnedIndex, 0, _tiles.Count);
+        ClearPendingUnpin();
+        RestoreTileAtIndex(_tiles, tile, index);
+        _tileView.Refresh();
+        UpdatePinnedAppStates();
+        if (!RenumberAndSave())
+        {
+            _tiles.Remove(tile);
+            for (var itemIndex = 0; itemIndex < _tiles.Count; itemIndex++)
+                _tiles[itemIndex].Order = itemIndex;
+            _tileView.Refresh();
+            UpdatePinnedAppStates();
+            UpdatePinnedEmptyState();
+            return;
+        }
+        UpdatePinnedEmptyState();
+        SetStatus($"已恢复“{tile.Name}”");
+    }
+
+    internal static int RestoreTileAtIndex(IList<TileLayoutItem> tiles,
+        TileLayoutItem tile, int requestedIndex)
+    {
+        var index = Math.Clamp(requestedIndex, 0, tiles.Count);
+        tiles.Insert(index, tile);
+        for (var itemIndex = 0; itemIndex < tiles.Count; itemIndex++)
+            tiles[itemIndex].Order = itemIndex;
+        return index;
+    }
+
+    private void StatusToast_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (_pendingUnpinnedTile is not null)
+            _statusTimer.Stop();
+    }
+
+    private void StatusToast_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (_pendingUnpinnedTile is not null && !StatusActionButton.IsKeyboardFocusWithin)
+            _statusTimer.Start();
+    }
+
+    private void StatusActionButton_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (_pendingUnpinnedTile is not null)
+            _statusTimer.Stop();
+    }
+
+    private void StatusActionButton_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (_pendingUnpinnedTile is not null && !StatusToast.IsMouseOver)
+            _statusTimer.Start();
+    }
+
+    private void ClearPendingUnpin()
+    {
+        _pendingUnpinnedTile = null;
+        _pendingUnpinnedIndex = -1;
+        StatusActionButton.Visibility = Visibility.Collapsed;
     }
 
     private void Launch(LauncherItem item)
@@ -1621,17 +1936,49 @@ public partial class MainWindow : Window, IDisposable
                 Application.Current.Shutdown();
                 break;
             case "sleep":
-                HideLauncher();
-                NativeWindow.SetSuspendState(false, true, false);
+                if (NativeWindow.SetSuspendState(false, false, false))
+                {
+                    HideLauncher();
+                }
+                else
+                {
+                    var error = new Win32Exception(Marshal.GetLastWin32Error()).Message;
+                    SetStatus($"无法使电脑进入睡眠：{error}");
+                }
                 break;
             case "restart":
                 if (ConfirmPowerAction("确定要重新启动电脑吗？"))
-                    Process.Start(new ProcessStartInfo("shutdown.exe", "/r /t 0") { UseShellExecute = true });
+                    StartPowerCommand("/r /t 0", "重新启动");
                 break;
             case "shutdown":
                 if (ConfirmPowerAction("确定要关闭电脑吗？"))
-                    Process.Start(new ProcessStartInfo("shutdown.exe", "/s /t 0") { UseShellExecute = true });
+                    StartPowerCommand("/s /t 0", "关机");
                 break;
+        }
+    }
+
+    private async void StartPowerCommand(string arguments, string actionName)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo("shutdown.exe", arguments)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+            if (process is null)
+            {
+                SetStatus($"无法执行{actionName}：系统未启动关机命令");
+                return;
+            }
+
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0)
+                SetStatus($"无法执行{actionName}：关机命令返回错误 {process.ExitCode}");
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            SetStatus($"无法执行{actionName}：{ex.Message}");
         }
     }
 
@@ -1649,23 +1996,33 @@ public partial class MainWindow : Window, IDisposable
         }
     }
 
-    private void RenumberAndSave()
+    private bool RenumberAndSave()
     {
         for (var index = 0; index < _tiles.Count; index++)
             _tiles[index].Order = index;
         try
         {
             _layoutService.Save(_tiles, _canvasZoom);
+            return true;
         }
         catch (IOException ex)
         {
             SetStatus($"布局保存失败：{ex.Message}");
+            return false;
         }
     }
 
-    private void SetStatus(string message)
+    private void SetStatus(string message, bool showUndo = false)
     {
+        if (!showUndo)
+            ClearPendingUnpin();
+        StatusActionButton.Visibility = showUndo ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = message;
+        StatusText.ToolTip = message;
+        StatusToast.Visibility = Visibility.Visible;
+        StatusToast.Opacity = 1;
+        UIElementAutomationPeer.CreatePeerForElement(StatusText)?
+            .RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         _statusTimer.Stop();
         _statusTimer.Start();
     }

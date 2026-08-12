@@ -30,12 +30,14 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,4" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -46,6 +48,10 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="#3B5B8198" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#304D7894" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#D9F5FCFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -161,7 +167,7 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0,1" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
@@ -181,6 +187,9 @@
                                 <Setter TargetName="ItemChrome" Property="Background" Value="#48406C8A" />
                                 <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#9ADAF3FF" />
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#DDF7FDFF" />
+                            </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsSelected" Value="True" />
@@ -199,6 +208,7 @@
             <Setter Property="Foreground" Value="#F2FFFFFF" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type CheckBox}">
@@ -234,6 +244,10 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ToggleChrome" Property="Opacity" Value="0.78" />
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ToggleChrome" Property="Background" Value="#315B7C96" />
+                                <Setter TargetName="ToggleChrome" Property="BorderBrush" Value="#D8F5FCFF" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -250,7 +264,7 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
@@ -275,6 +289,11 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ActionChrome" Property="Background" Value="#4B3D789C" />
                                 <Setter TargetName="ActionChrome" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ActionChrome" Property="Background" Value="#315C819E" />
+                                <Setter TargetName="ActionChrome" Property="BorderBrush" Value="#D8F5FCFF" />
+                                <Setter TargetName="ActionAccent" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ActionChrome" Property="Opacity" Value="0.4" />
@@ -324,7 +343,7 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="MinWidth" Value="218" />
             <Setter Property="Padding" Value="9,8" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type MenuItem}">
@@ -352,7 +371,7 @@
                                 </Grid>
                             </Border>
                             <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False"
-                                   PopupAnimation="Fade" Placement="Right" HorizontalOffset="-3" VerticalOffset="-6"
+                                   Placement="Right" HorizontalOffset="-3" VerticalOffset="-6"
                                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
                                 <Border Padding="6" CornerRadius="9" Background="#FA0B1D30"
                                         BorderBrush="#789BCFE7" BorderThickness="1">
@@ -393,7 +412,7 @@
         <Style x:Key="TileChromeStyle" TargetType="Border">
             <Setter Property="Margin" Value="4" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Cursor" Value="SizeAll" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderBrush" Value="#42E8F7FF" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -416,26 +435,15 @@
                         </Setter.Value>
                     </Setter>
                 </Trigger>
-                <EventTrigger RoutedEvent="MouseEnter">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
-                                             To="1.015" Duration="0:0:0.11" />
-                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
-                                             To="1.015" Duration="0:0:0.11" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-                <EventTrigger RoutedEvent="MouseLeave">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
-                                             To="1" Duration="0:0:0.16" />
-                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
-                                             To="1" Duration="0:0:0.16" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#F2FAFEFF" />
+                    <Setter Property="BorderThickness" Value="2" />
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#4CCAF2FF" BlurRadius="20" ShadowDepth="0" Opacity="0.62" />
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -518,6 +526,17 @@
                         </Border.Background>
                     </Border>
 
+                    <Border x:Name="LabelContrastScrim" Height="82" VerticalAlignment="Bottom"
+                            IsHitTestVisible="False" CornerRadius="0,0,9,9">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#00000000" Offset="0" />
+                                <GradientStop Color="#24000000" Offset="0.42" />
+                                <GradientStop Color="#59000000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+
                     <Grid x:Name="AppTileContent" Margin="12">
                         <Grid.Style>
                             <Style TargetType="Grid">
@@ -583,7 +602,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <Thumb x:Name="ResizeHandle" Width="26" Height="26" Opacity="0"
+                    <Thumb x:Name="ResizeHandle" Width="32" Height="32" Opacity="0.07"
                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE"
                            ToolTip="拖动按网格调整大小 · 按住 Alt 无级调整"
                            DragStarted="ResizeHandle_DragStarted" DragDelta="ResizeHandle_DragDelta"
@@ -606,9 +625,13 @@
                 <Trigger SourceName="Tile" Property="IsMouseOver" Value="True">
                     <Setter TargetName="ResizeHandle" Property="Opacity" Value="0.94" />
                 </Trigger>
+                <Trigger SourceName="Tile" Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="ResizeHandle" Property="Opacity" Value="0.78" />
+                </Trigger>
                 <DataTrigger Binding="{Binding VisualStyle}" Value="{x:Static models:TileVisualStyle.Classic}">
                     <Setter TargetName="GlassOverlay" Property="Visibility" Value="Collapsed" />
                     <Setter TargetName="Tile" Property="CornerRadius" Value="4" />
+                    <Setter TargetName="LabelContrastScrim" Property="CornerRadius" Value="0,0,4,4" />
                     <Setter TargetName="Tile" Property="Effect" Value="{x:Null}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding VisualStyle}" Value="{x:Static models:TileVisualStyle.Minimal}">
@@ -618,6 +641,7 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding VisualStyle}" Value="{x:Static models:TileVisualStyle.IconOnly}">
                     <Setter TargetName="GlassOverlay" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="LabelContrastScrim" Property="Visibility" Value="Collapsed" />
                     <Setter TargetName="AppName" Property="Visibility" Value="Collapsed" />
                     <Setter TargetName="AppIcon" Property="Width" Value="72" />
                     <Setter TargetName="AppIcon" Property="Height" Value="72" />
@@ -625,6 +649,7 @@
                     <Setter TargetName="AppTileContent" Property="Margin" Value="14" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Size}" Value="{x:Static models:TileSize.Small}">
+                    <Setter TargetName="LabelContrastScrim" Property="Visibility" Value="Collapsed" />
                     <Setter TargetName="AppName" Property="Visibility" Value="Collapsed" />
                     <Setter TargetName="AppIcon" Property="Width" Value="32" />
                     <Setter TargetName="AppIcon" Property="Height" Value="32" />
@@ -653,9 +678,21 @@
                     </Grid>
                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                FontSize="14" TextTrimming="CharacterEllipsis" />
-                    <Button Grid.Column="2" Content="&#xE718;" ToolTip="固定到开始屏幕"
-                            Style="{StaticResource IconButtonStyle}" Width="32" Height="32" FontSize="15"
-                            Tag="{Binding}" Click="PinApp_Click" />
+                    <Button Grid.Column="2" ToolTip="{Binding PinActionToolTip}"
+                            Width="32" Height="32" FontSize="15" Tag="{Binding}" Click="PinApp_Click"
+                            AutomationProperties.Name="{Binding PinActionAccessibleName}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
+                                <Setter Property="Content" Value="&#xE718;" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                        <Setter Property="Content" Value="&#xE73E;" />
+                                        <Setter Property="IsEnabled" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -714,16 +751,22 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                    <Button Content="&#xE80F;" ToolTip="固定的磁贴" Style="{StaticResource IconButtonStyle}" Click="PinnedTiles_Click" />
-                    <Button Content="&#xE71D;" ToolTip="所有应用与搜索" Style="{StaticResource IconButtonStyle}" Click="AllApps_Click" />
-                    <Button Content="&#xE8B7;" ToolTip="文件资源管理器" Style="{StaticResource IconButtonStyle}" Click="Explorer_Click" />
-                    <Button Content="&#xE713;" ToolTip="Windows 设置" Style="{StaticResource IconButtonStyle}" Click="Settings_Click" />
+                    <Button x:Name="PinnedNavigationButton" Content="&#xE80F;" Tag="Selected"
+                            ToolTip="固定的磁贴" AutomationProperties.Name="固定的磁贴"
+                            Style="{StaticResource NavButtonStyle}" Click="PinnedTiles_Click" />
+                    <Button x:Name="AppsNavigationButton" Content="&#xE71D;"
+                            ToolTip="所有应用与搜索" AutomationProperties.Name="所有应用与搜索"
+                            Style="{StaticResource NavButtonStyle}" Click="AllApps_Click" />
+                    <Button Content="&#xE8B7;" ToolTip="文件资源管理器" AutomationProperties.Name="打开文件资源管理器"
+                            Style="{StaticResource IconButtonStyle}" Click="Explorer_Click" />
+                    <Button Content="&#xE713;" ToolTip="Windows 设置" AutomationProperties.Name="打开 Windows 设置"
+                            Style="{StaticResource IconButtonStyle}" Click="Settings_Click" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="2">
-                    <Button x:Name="PowerButton" Content="&#xE7E8;" ToolTip="电源" Style="{StaticResource IconButtonStyle}" Click="Power_Click" />
+                    <Button x:Name="PowerButton" Content="&#xE7E8;" ToolTip="电源" AutomationProperties.Name="电源选项"
+                            Style="{StaticResource IconButtonStyle}" Click="Power_Click" />
                     <Popup x:Name="PowerPopup" PlacementTarget="{Binding ElementName=PowerButton}" Placement="Right"
-                           PopupAnimation="Fade"
                            AllowsTransparency="True" StaysOpen="False" Opened="Popup_Opened" Closed="Popup_Closed">
                         <Border BorderBrush="#76DDF3FF" BorderThickness="1"
                                 CornerRadius="12" Padding="8" Margin="9,0,0,0">
@@ -790,8 +833,8 @@
                     <ColumnDefinition Width="380" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="开始" FontSize="32" FontWeight="Light" VerticalAlignment="Center" />
-                    <TextBlock Text="你的空间，按你的方式排列" FontSize="13"
+                    <TextBlock x:Name="PageTitleText" Text="开始" FontSize="32" FontWeight="Light" VerticalAlignment="Center" />
+                    <TextBlock x:Name="PageSubtitleText" Text="你的空间，按你的方式排列" FontSize="13"
                                Foreground="{StaticResource TextSecondary}" Margin="18,10,0,0" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock x:Name="DateText" Grid.Column="1" FontSize="14"
@@ -830,33 +873,47 @@
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="GroupItem">
                                                     <StackPanel Margin="0,0,34,16">
-                                                        <Grid Height="30">
+                                                        <Grid Height="34">
                                                             <TextBox Text="{Binding Name, Mode=OneWay}" Tag="{Binding Name}"
                                                                      FontFamily="{StaticResource UiFont}" FontSize="15" FontWeight="Normal"
                                                                      Margin="1,0,30,9" Padding="4,1" Foreground="#F0F5FAFF"
                                                                      Background="Transparent" BorderThickness="0"
                                                                      ToolTip="单击可重命名分组"
+                                                                     AutomationProperties.Name="{Binding Name, StringFormat=分组名称：{0}}"
                                                                      LostKeyboardFocus="GroupName_LostKeyboardFocus"
                                                                      PreviewKeyDown="GroupName_PreviewKeyDown" />
-                                                            <Thumb Width="26" Height="26" Margin="0,0,2,4"
+                                                            <Thumb Width="32" Height="32" Margin="0,0,0,0"
                                                                    Tag="{Binding Name}"
+                                                                   Focusable="True"
+                                                                   FocusVisualStyle="{StaticResource KeyboardFocusVisualStyle}"
                                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                                   Cursor="SizeNWSE" ToolTip="拖动调整分组宽高"
+                                                                   Cursor="SizeNWSE" ToolTip="拖动或使用方向键调整分组宽高"
                                                                    AutomationProperties.Name="{Binding Name, StringFormat=调整分组大小：{0}}"
+                                                                   AutomationProperties.HelpText="左右方向键调整列数，上下方向键调整行数"
+                                                                   PreviewKeyDown="GroupResize_PreviewKeyDown"
                                                                    DragStarted="GroupResize_DragStarted"
                                                                    DragDelta="GroupResize_DragDelta"
                                                                    DragCompleted="GroupResize_DragCompleted">
                                                                 <Thumb.Template>
                                                                     <ControlTemplate TargetType="Thumb">
-                                                                        <Border Background="#18000000" BorderBrush="#45D9F3FF"
+                                                                        <Border x:Name="GroupResizeChrome" Opacity="0.52"
+                                                                                Background="#18000000" BorderBrush="#45D9F3FF"
                                                                                 BorderThickness="1" CornerRadius="4">
                                                                             <Grid>
                                                                                 <Path Data="M 8,15 L 15,8 M 11,17 L 17,11"
                                                                                       Stroke="#D7ECF8FF" StrokeThickness="1.4"
                                                                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                                                            </Grid>
-                                                                        </Border>
-                                                                    </ControlTemplate>
+                                                                             </Grid>
+                                                                         </Border>
+                                                                         <ControlTemplate.Triggers>
+                                                                             <Trigger Property="IsMouseOver" Value="True">
+                                                                                 <Setter TargetName="GroupResizeChrome" Property="Opacity" Value="0.9" />
+                                                                             </Trigger>
+                                                                             <Trigger Property="IsDragging" Value="True">
+                                                                                 <Setter TargetName="GroupResizeChrome" Property="Opacity" Value="1" />
+                                                                             </Trigger>
+                                                                         </ControlTemplate.Triggers>
+                                                                     </ControlTemplate>
                                                                 </Thumb.Template>
                                                             </Thumb>
                                                         </Grid>
@@ -877,6 +934,27 @@
                     </ItemsControl>
                 </ScrollViewer>
 
+                <Border x:Name="PinnedEmptyState" Panel.ZIndex="2" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Padding="34,28" CornerRadius="14"
+                        Background="#B20A2034" BorderBrush="#4FDDF3FF" BorderThickness="1">
+                    <StackPanel Width="330" HorizontalAlignment="Center">
+                        <Border Width="54" Height="54" CornerRadius="27" HorizontalAlignment="Center"
+                                Background="#2E75BCE5" BorderBrush="#72DDF3FF" BorderThickness="1">
+                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="24"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="这里还没有固定的磁贴" FontSize="20" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" Margin="0,18,0,7" />
+                        <TextBlock Text="从所有应用中选择常用项目，把开始屏幕布置成你的工作空间。"
+                                   FontSize="13" Foreground="{StaticResource TextSecondary}" TextAlignment="Center"
+                                   TextWrapping="Wrap" LineHeight="20" />
+                        <Button Content="浏览所有应用" Style="{StaticResource PrimaryActionButtonStyle}"
+                                HorizontalAlignment="Center" Margin="0,20,0,0" Click="AllApps_Click"
+                                AutomationProperties.Name="浏览所有应用并固定磁贴" />
+                    </StackPanel>
+                </Border>
+
                 <Border x:Name="AppsPanel"
                         Width="{Binding ActualWidth, ElementName=ContentHost, Converter={StaticResource DrawerWidth}}"
                         Margin="32,0,0,8"
@@ -895,7 +973,8 @@
                                        FontSize="13" Foreground="{StaticResource TextSecondary}"
                                        VerticalAlignment="Center" Margin="126,5,48,0" />
                             <Button Content="&#xE711;" Style="{StaticResource IconButtonStyle}" HorizontalAlignment="Right"
-                                    Width="38" Height="38" Click="CloseApps_Click" />
+                                    Width="38" Height="38" Click="CloseApps_Click" ToolTip="关闭所有应用"
+                                    AutomationProperties.Name="关闭所有应用" />
                         </Grid>
                         <Grid x:Name="SearchHost" Grid.Row="1" Height="50" Margin="8,2,8,12"
                               VerticalAlignment="Center">
@@ -910,9 +989,10 @@
                                        Margin="50,0,48,0" VerticalAlignment="Center" IsHitTestVisible="False"
                                        Panel.ZIndex="2" />
                             <Button x:Name="ClearSearchButton" Content="&#xE711;" ToolTip="清除搜索"
-                                    Style="{StaticResource IconButtonStyle}" Width="36" Height="36" FontSize="14"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,7,0"
-                                    Visibility="Collapsed" Click="ClearSearch_Click" Panel.ZIndex="3" />
+                                     Style="{StaticResource IconButtonStyle}" Width="36" Height="36" FontSize="14"
+                                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,7,0"
+                                     Visibility="Collapsed" Click="ClearSearch_Click" Panel.ZIndex="3"
+                                     AutomationProperties.Name="清除搜索" />
                         </Grid>
                         <ListBox x:Name="AppsList" Grid.Row="2" HorizontalAlignment="Stretch"
                                  Background="Transparent" BorderThickness="0"
@@ -922,10 +1002,12 @@
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  VirtualizingPanel.IsVirtualizing="True"
                                  VirtualizingPanel.IsVirtualizingWhenGrouping="True"
-                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                 VirtualizingPanel.ScrollUnit="Pixel"
-                                 VirtualizingPanel.CacheLength="1,1"
-                                 MouseDoubleClick="AppsList_MouseDoubleClick">
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  VirtualizingPanel.ScrollUnit="Pixel"
+                                  VirtualizingPanel.CacheLength="1,1"
+                                  MouseDoubleClick="AppsList_MouseDoubleClick"
+                                  PreviewKeyDown="AppsList_PreviewKeyDown"
+                                  AutomationProperties.Name="应用列表">
                             <ListBox.Resources>
                                 <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource GlassScrollBarStyle}" />
                                 <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent" />
@@ -941,6 +1023,18 @@
                                 </GroupStyle>
                             </ListBox.GroupStyle>
                         </ListBox>
+                        <StackPanel x:Name="EmptySearchState" Grid.Row="2" Visibility="Collapsed"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    IsHitTestVisible="False" Margin="28">
+                            <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="32"
+                                       Foreground="#BFDDF3FF" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="EmptySearchTitle" Text="没有找到匹配的应用"
+                                       FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                       Margin="0,15,0,6" />
+                            <TextBlock x:Name="EmptySearchDescription" Text="尝试更短的名称或检查拼写"
+                                       FontSize="13" Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -958,8 +1052,30 @@
                 <TextBlock Text="拖动与拉伸自动吸附网格 · Alt + 拉伸可无级调节 · 拖到右侧可新建分组" FontSize="12"
                            Foreground="#7FFFFFFF" VerticalAlignment="Bottom" />
                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
-                    <TextBlock x:Name="StatusText" FontSize="12" Foreground="#AFFFFFFF"
-                               VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <Border x:Name="StatusToast" Visibility="Collapsed" Margin="0,0,12,-4"
+                            Padding="11,7" CornerRadius="8" MaxWidth="520"
+                            Background="#E6122C42" BorderBrush="#70DDF3FF" BorderThickness="1"
+                            MouseEnter="StatusToast_MouseEnter" MouseLeave="StatusToast_MouseLeave">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       Foreground="#D8F5FCFF" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock x:Name="StatusText" Grid.Column="1" FontSize="13" Foreground="#F2FFFFFF"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                       MaxWidth="390"
+                                       AutomationProperties.LiveSetting="Polite" />
+                            <Button x:Name="StatusActionButton" Grid.Column="2" Content="撤销" Visibility="Collapsed"
+                                    Style="{StaticResource ZoomResetButtonStyle}" Margin="10,0,0,0"
+                                    Padding="8,2" Click="UndoUnpin_Click"
+                                    GotKeyboardFocus="StatusActionButton_GotKeyboardFocus"
+                                    LostKeyboardFocus="StatusActionButton_LostKeyboardFocus"
+                                    AutomationProperties.Name="撤销取消固定" />
+                        </Grid>
+                    </Border>
                     <Border Width="1" Height="12" Background="#38DDF3FF" Margin="0,0,12,0" />
                     <Button x:Name="ZoomResetButton" Style="{StaticResource ZoomResetButtonStyle}"
                             ToolTip="点击恢复 100%" Click="ZoomReset_Click"

@@ -22,7 +22,8 @@ internal sealed class LayoutService
         {
             if (!File.Exists(_layoutPath))
                 return null;
-            return JsonSerializer.Deserialize<LayoutData>(File.ReadAllText(_layoutPath), JsonOptions);
+            var layout = JsonSerializer.Deserialize<LayoutData>(File.ReadAllText(_layoutPath), JsonOptions);
+            return NormalizeLoadedLayout(layout);
         }
         catch (JsonException)
         {
@@ -32,6 +33,18 @@ internal sealed class LayoutService
         {
             return null;
         }
+    }
+
+    internal static LayoutData? NormalizeLoadedLayout(LayoutData? layout)
+    {
+        if (layout is null || layout.Tiles is not null)
+            return layout;
+        return new LayoutData
+        {
+            Version = layout.Version,
+            CanvasZoom = layout.CanvasZoom,
+            Tiles = []
+        };
     }
 
     public void Save(IEnumerable<TileLayoutItem> tiles, double canvasZoom = 1)

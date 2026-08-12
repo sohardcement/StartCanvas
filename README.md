@@ -41,6 +41,12 @@ Tile10 是一个面向 Windows 11 的全屏开始屏幕，用来还原 Windows 1
 dotnet build WinTileLauncher.slnx -c Release
 ```
 
+运行内置回归验证（键盘钩子、应用抽屉、布局、拖放、缩放与视觉转换）：
+
+```powershell
+dotnet run --project WinTileLauncher.Verifier/WinTileLauncher.Verifier.csproj -c Release
+```
+
 生成免安装、包含运行时的单文件版本：
 
 ```powershell
