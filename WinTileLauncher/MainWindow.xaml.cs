@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -27,9 +28,11 @@ public partial class MainWindow : Window, IDisposable
     private readonly ObservableCollection<TileLayoutItem> _tiles = [];
     private readonly AppDiscoveryService _discoveryService = new();
     private readonly LayoutService _layoutService = new();
+    private readonly AppearanceService _appearanceService = new();
     private readonly DispatcherTimer _clockTimer;
     private readonly DispatcherTimer _liveTileTimer;
     private readonly DispatcherTimer _statusTimer;
+    private readonly DispatcherTimer _appearanceSaveTimer;
     private readonly ICollectionView _tileView;
 
     private GlobalKeyboardHook? _keyboardHook;
@@ -70,12 +73,21 @@ public partial class MainWindow : Window, IDisposable
     private double _canvasZoom = 1;
     private TileLayoutItem? _pendingUnpinnedTile;
     private int _pendingUnpinnedIndex = -1;
+    private AppearanceSettings _appearance = new();
+    private bool _appearanceReady;
+    private bool _isApplyingAppearance;
+    private bool _appearanceDirty;
+    private bool _isImportingBackground;
 
     private static bool AnimationsEnabled => SystemParameters.ClientAreaAnimation;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        _appearance = _appearanceService.Load();
+        ApplyAppearance();
+        _appearanceReady = true;
 
         _tileView = new ListCollectionView(_tiles);
         _tileView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(TileLayoutItem.Group)));
@@ -100,6 +112,13 @@ public partial class MainWindow : Window, IDisposable
             StatusToast.Visibility = Visibility.Collapsed;
             ClearPendingUnpin();
             _statusTimer.Stop();
+        };
+
+        _appearanceSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
+        _appearanceSaveTimer.Tick += (_, _) =>
+        {
+            _appearanceSaveTimer.Stop();
+            SaveAppearance();
         };
     }
 
@@ -291,6 +310,7 @@ public partial class MainWindow : Window, IDisposable
         _isHiding = false;
         ClearLauncherAnimations();
         _ignoreDeactivationUntil = DateTime.UtcNow.AddSeconds(2);
+        ClosePersonalization(false);
         SearchBox.Clear();
         ShowPinnedTiles(false);
         WindowState = WindowState.Normal;
@@ -332,6 +352,7 @@ public partial class MainWindow : Window, IDisposable
         _isHiding = true;
         var transition = ++_transitionVersion;
         PowerPopup.IsOpen = false;
+        ClosePersonalization(false);
         AppsPanel.Visibility = Visibility.Collapsed;
         SearchHost.Visibility = Visibility.Collapsed;
         SearchBox.Clear();
@@ -563,6 +584,13 @@ public partial class MainWindow : Window, IDisposable
 
         if (e.Key == Key.Escape)
         {
+            if (PersonalizationPanel.Visibility == Visibility.Visible)
+            {
+                ClosePersonalization();
+                e.Handled = true;
+                return;
+            }
+
             if (Keyboard.FocusedElement is TextBox { Tag: string oldGroupName } groupNameEditor)
             {
                 groupNameEditor.Text = oldGroupName;
@@ -703,16 +731,22 @@ public partial class MainWindow : Window, IDisposable
 
     private void AllApps_Click(object sender, RoutedEventArgs e)
     {
+        ClosePersonalization(false);
         SearchBox.Clear();
         OpenAppsDrawer(true);
     }
 
-    private void PinnedTiles_Click(object sender, RoutedEventArgs e) => ShowPinnedTiles();
+    private void PinnedTiles_Click(object sender, RoutedEventArgs e)
+    {
+        ClosePersonalization(false);
+        ShowPinnedTiles();
+    }
 
     private void OpenSearch() => OpenAppsDrawer(true);
 
     private void OpenAppsDrawer(bool focusSearch)
     {
+        ClosePersonalization(false);
         SearchHost.Visibility = Visibility.Visible;
         DateText.Visibility = Visibility.Visible;
         AppsPanelTitle.Text = "所有应用";
@@ -1903,11 +1937,389 @@ public partial class MainWindow : Window, IDisposable
 
     private void ContextMenu_Closed(object sender, RoutedEventArgs e) => _transientUiOpen = false;
 
+    private void Personalization_Click(object sender, RoutedEventArgs e)
+    {
+        if (PersonalizationPanel.Visibility == Visibility.Visible)
+        {
+            ClosePersonalization();
+            return;
+        }
+
+        PowerPopup.IsOpen = false;
+        ShowPinnedTiles();
+        PersonalizationDismissLayer.Visibility = Visibility.Visible;
+        PersonalizationPanel.Visibility = Visibility.Visible;
+        PersonalizationButton.SetResourceReference(Control.BackgroundProperty, "AccentSoftBrush");
+        _transientUiOpen = true;
+        AnimateDrawerIn(PersonalizationPanel, 18);
+        var announcement = $"个性化设置，当前为{AppearanceService.ResolveTheme(_appearance.ThemeId).DisplayName}主题";
+        Dispatcher.BeginInvoke(() =>
+        {
+            var selected = ThemeChoices().FirstOrDefault(choice => choice.IsChecked == true);
+            var focusedChoice = selected ?? OceanThemeChoice;
+            focusedChoice.Focus();
+            UIElementAutomationPeer.CreatePeerForElement(focusedChoice)?.RaiseNotificationEvent(
+                AutomationNotificationKind.Other,
+                AutomationNotificationProcessing.ImportantMostRecent,
+                announcement,
+                "Tile10.AppearancePanelOpened");
+        }, DispatcherPriority.Input);
+    }
+
+    private void ClosePersonalization_Click(object sender, RoutedEventArgs e) => ClosePersonalization();
+
+    private void PersonalizationDismissLayer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        ClosePersonalization();
+        e.Handled = true;
+    }
+
+    private void ClosePersonalization(bool restoreFocus = true)
+    {
+        if (PersonalizationPanel.Visibility != Visibility.Visible)
+            return;
+
+        PersonalizationPanel.Visibility = Visibility.Collapsed;
+        PersonalizationDismissLayer.Visibility = Visibility.Collapsed;
+        PersonalizationButton.ClearValue(Control.BackgroundProperty);
+        _appearanceSaveTimer.Stop();
+        SaveAppearance();
+        _transientUiOpen = PowerPopup.IsOpen;
+        if (restoreFocus && IsVisible)
+            PersonalizationButton.Focus();
+    }
+
+    private IEnumerable<RadioButton> ThemeChoices()
+    {
+        yield return OceanThemeChoice;
+        yield return CyanThemeChoice;
+        yield return ForestThemeChoice;
+        yield return VioletThemeChoice;
+        yield return SunsetThemeChoice;
+        yield return GraphiteThemeChoice;
+    }
+
+    private void ThemeChoice_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_appearanceReady || _isApplyingAppearance || sender is not RadioButton { Tag: string themeId })
+            return;
+
+        _appearance.ThemeId = AppearanceService.ResolveThemeId(themeId);
+        ApplyAppearance();
+        QueueAppearanceSave();
+    }
+
+    private async void ChooseBackground_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isImportingBackground)
+            return;
+
+        using var dialog = new WinForms.OpenFileDialog
+        {
+            Title = "选择 Tile10 背景图片",
+            Filter = "图片 (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+            CheckFileExists = true,
+            Multiselect = false,
+            RestoreDirectory = true
+        };
+
+        _transientUiOpen = true;
+        _ignoreDeactivationUntil = DateTime.UtcNow.AddSeconds(2);
+        try
+        {
+            var owner = new NativeWin32Window(new WindowInteropHelper(this).Handle);
+            if (dialog.ShowDialog(owner) != WinForms.DialogResult.OK)
+                return;
+
+            var oldManagedPath = _appearance.BackgroundImagePath;
+            var oldBackgroundMode = _appearance.BackgroundMode;
+            SetBackgroundImportBusy(true);
+            BackgroundStatusText.Text = "正在准备背景图片…";
+            var importedPath = await Task.Run(() => _appearanceService.ImportBackgroundImage(dialog.FileName));
+            _appearance.BackgroundImagePath = importedPath;
+            _appearance.BackgroundMode = AppearanceService.ImageBackgroundMode;
+            ApplyAppearance();
+            if (!SaveAppearanceImmediately())
+            {
+                _appearance.BackgroundImagePath = oldManagedPath;
+                _appearance.BackgroundMode = oldBackgroundMode;
+                ApplyAppearance();
+                _appearanceService.DeleteManagedBackground(importedPath);
+                return;
+            }
+            _appearanceService.DeleteManagedBackground(oldManagedPath);
+            SetStatus("背景图片已更新");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+                                   NotSupportedException or InvalidDataException or ArgumentException)
+        {
+            ApplyAppearance();
+            SetStatus($"无法使用这张图片：{ex.Message}");
+        }
+        finally
+        {
+            SetBackgroundImportBusy(false);
+            _ignoreDeactivationUntil = DateTime.UtcNow.AddSeconds(1);
+            _transientUiOpen = PersonalizationPanel.Visibility == Visibility.Visible;
+        }
+    }
+
+    private void ChooseBackgroundColor_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isImportingBackground)
+            return;
+
+        var initial = AppearanceService.ParseColor(_appearance.BackgroundColor);
+        using var dialog = new WinForms.ColorDialog
+        {
+            AllowFullOpen = true,
+            AnyColor = true,
+            FullOpen = true,
+            SolidColorOnly = false,
+            Color = DrawingColor.FromArgb(initial.R, initial.G, initial.B)
+        };
+
+        _transientUiOpen = true;
+        _ignoreDeactivationUntil = DateTime.UtcNow.AddSeconds(2);
+        try
+        {
+            var owner = new NativeWin32Window(new WindowInteropHelper(this).Handle);
+            if (dialog.ShowDialog(owner) != WinForms.DialogResult.OK)
+                return;
+
+            _appearance.BackgroundColor = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
+            _appearance.BackgroundMode = AppearanceService.SolidBackgroundMode;
+            ApplyAppearance();
+            QueueAppearanceSave();
+            SetStatus("自定义背景颜色已应用");
+        }
+        finally
+        {
+            _ignoreDeactivationUntil = DateTime.UtcNow.AddSeconds(1);
+            _transientUiOpen = PersonalizationPanel.Visibility == Visibility.Visible;
+        }
+    }
+
+    private void SetBackgroundImportBusy(bool isBusy)
+    {
+        _isImportingBackground = isBusy;
+        ChooseBackgroundButton.IsEnabled = !isBusy;
+    }
+
+    private void UseThemeBackground_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isImportingBackground)
+            return;
+
+        _appearance.BackgroundMode = AppearanceService.ThemeBackgroundMode;
+        ApplyAppearance();
+        QueueAppearanceSave();
+        SetStatus("已恢复当前主题背景");
+    }
+
+    private void BackgroundOverlaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (BackgroundOverlayValueText is not null)
+            BackgroundOverlayValueText.Text = $"{e.NewValue:0}%";
+        if (!_appearanceReady || _isApplyingAppearance)
+            return;
+
+        _appearance.BackgroundOverlayOpacity = e.NewValue / 100;
+        BackgroundOverlay.Opacity = _appearance.BackgroundMode == AppearanceService.ImageBackgroundMode
+            ? _appearance.BackgroundOverlayOpacity
+            : 0;
+        BackgroundPreviewOverlay.Opacity = BackgroundOverlay.Opacity;
+        QueueAppearanceSave();
+    }
+
+    private void ResetAppearance_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isImportingBackground)
+            return;
+
+        var oldManagedPath = _appearance.BackgroundImagePath;
+        var oldAppearance = CloneAppearance(_appearance);
+        _appearance = AppearanceService.Normalize(null);
+        ApplyAppearance();
+        if (!SaveAppearanceImmediately())
+        {
+            _appearance = oldAppearance;
+            ApplyAppearance();
+            return;
+        }
+        _appearanceService.DeleteManagedBackground(oldManagedPath);
+        SetStatus("外观已恢复默认");
+    }
+
+    private void ApplyAppearance()
+    {
+        _appearance = AppearanceService.Normalize(_appearance);
+        var theme = AppearanceService.ResolveTheme(_appearance.ThemeId);
+        ApplyThemeResources(theme);
+
+        var themeBackground = AppearanceService.CreateThemeBackground(theme);
+        Brush actualBackground = themeBackground;
+        ImageSource? image = null;
+        var imageFallback = false;
+        var resolution = AppearanceService.ResolveBackground(_appearance);
+        if (resolution.Mode == AppearanceService.ImageBackgroundMode)
+        {
+            if (_appearanceService.TryLoadBackgroundImage(resolution.Value, out image) && image is not null)
+            {
+                var imageBrush = new ImageBrush(image)
+                {
+                    Stretch = Stretch.UniformToFill,
+                    AlignmentX = AlignmentX.Center,
+                    AlignmentY = AlignmentY.Center
+                };
+                imageBrush.Freeze();
+                actualBackground = imageBrush;
+            }
+            else
+            {
+                imageFallback = true;
+            }
+        }
+        else if (resolution.Mode == AppearanceService.SolidBackgroundMode && resolution.Value is not null)
+        {
+            actualBackground = CreateColorBackground(resolution.Value);
+        }
+        else
+        {
+            imageFallback = resolution.IsFallback;
+        }
+
+        LauncherRoot.Background = actualBackground;
+        BackgroundOverlay.Opacity = image is not null ? _appearance.BackgroundOverlayOpacity : 0;
+
+        _isApplyingAppearance = true;
+        try
+        {
+            foreach (var choice in ThemeChoices())
+                choice.IsChecked = string.Equals(choice.Tag as string, theme.Id, StringComparison.OrdinalIgnoreCase);
+            BackgroundOverlaySlider.Value = _appearance.BackgroundOverlayOpacity * 100;
+            BackgroundOverlaySlider.IsEnabled = image is not null;
+            BackgroundOverlayValueText.Text = $"{_appearance.BackgroundOverlayOpacity:P0}";
+            BackgroundPreviewTheme.Background = resolution.Mode == AppearanceService.SolidBackgroundMode
+                ? actualBackground
+                : themeBackground;
+            BackgroundPreviewImage.Source = image;
+            BackgroundPreviewImage.Visibility = image is not null ? Visibility.Visible : Visibility.Collapsed;
+            BackgroundPreviewOverlay.Opacity = image is not null ? _appearance.BackgroundOverlayOpacity : 0;
+            BackgroundStatusText.Text = image is not null
+                ? $"图片 · {Path.GetFileName(_appearance.BackgroundImagePath)}"
+                : imageFallback
+                    ? "图片不可用 · 已使用主题背景"
+                    : resolution.Mode == AppearanceService.SolidBackgroundMode
+                        ? $"自定义颜色 · {_appearance.BackgroundColor}"
+                        : $"{theme.DisplayName} · 主题背景";
+        }
+        finally
+        {
+            _isApplyingAppearance = false;
+        }
+    }
+
+    private static Brush CreateColorBackground(string value)
+    {
+        var color = AppearanceService.ParseColor(value);
+        static Color Shade(Color source, double amount) => Color.FromRgb(
+            (byte)Math.Round(source.R * amount),
+            (byte)Math.Round(source.G * amount),
+            (byte)Math.Round(source.B * amount));
+
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 1),
+            EndPoint = new Point(1, 0)
+        };
+        brush.GradientStops.Add(new GradientStop(Shade(color, 0.18), 0));
+        brush.GradientStops.Add(new GradientStop(Shade(color, 0.3), 0.52));
+        brush.GradientStops.Add(new GradientStop(Shade(color, 0.44), 1));
+        brush.Freeze();
+        return brush;
+    }
+
+    private static void ApplyThemeResources(LauncherTheme theme)
+    {
+        var resources = Application.Current.Resources;
+        resources["AccentBrush"] = CreateBrush(theme.Accent);
+        resources["AccentHoverBrush"] = CreateBrush(theme.AccentHover);
+        resources["AccentPressedBrush"] = CreateBrush(theme.AccentPressed);
+        resources["AccentSoftBrush"] = CreateBrush(theme.Accent, 0x66);
+        resources["GlassBrush"] = CreateBrush(theme.Glass);
+        resources["GlassStrongBrush"] = CreateBrush(theme.GlassStrong);
+        resources["GlassHoverBrush"] = CreateBrush(theme.GlassHover);
+        resources["ThemeBorderBrush"] = CreateBrush(theme.Border);
+        resources["ThemeBorderStrongBrush"] = CreateBrush(theme.BorderStrong);
+        resources["FocusBrush"] = CreateBrush(theme.Focus);
+        resources["DecorationStrokeBrush"] = CreateBrush(theme.Decoration);
+        resources["DecorationGlowBrush"] = CreateBrush(theme.Glow);
+        resources["TextPrimary"] = CreateBrush("#F8FBFF");
+        resources["TextSecondary"] = CreateBrush(theme.Focus, 0xBF);
+    }
+
+    private static SolidColorBrush CreateBrush(string value, byte? alpha = null)
+    {
+        var color = AppearanceService.ParseColor(value);
+        if (alpha.HasValue)
+            color.A = alpha.Value;
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+
+    private void QueueAppearanceSave()
+    {
+        if (!_appearanceReady)
+            return;
+        _appearanceDirty = true;
+        _appearanceSaveTimer.Stop();
+        _appearanceSaveTimer.Start();
+    }
+
+    private void SaveAppearance()
+    {
+        if (!_appearanceDirty)
+            return;
+        try
+        {
+            _appearanceService.Save(_appearance);
+            _appearanceDirty = false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SetStatus($"外观设置保存失败：{ex.Message}");
+        }
+    }
+
+    private bool SaveAppearanceImmediately()
+    {
+        _appearanceDirty = true;
+        _appearanceSaveTimer.Stop();
+        SaveAppearance();
+        return !_appearanceDirty;
+    }
+
+    private static AppearanceSettings CloneAppearance(AppearanceSettings source) => new()
+    {
+        Version = source.Version,
+        ThemeId = source.ThemeId,
+        BackgroundMode = source.BackgroundMode,
+        BackgroundColor = source.BackgroundColor,
+        BackgroundImagePath = source.BackgroundImagePath,
+        BackgroundOverlayOpacity = source.BackgroundOverlayOpacity
+    };
+
     private void Popup_Opened(object sender, EventArgs e) => _transientUiOpen = true;
 
     private void Popup_Closed(object sender, EventArgs e) => _transientUiOpen = false;
 
-    private void Power_Click(object sender, RoutedEventArgs e) => PowerPopup.IsOpen = !PowerPopup.IsOpen;
+    private void Power_Click(object sender, RoutedEventArgs e)
+    {
+        ClosePersonalization(false);
+        PowerPopup.IsOpen = !PowerPopup.IsOpen;
+    }
 
     private void StartWithWindows_Click(object sender, RoutedEventArgs e)
     {
@@ -2050,6 +2462,8 @@ public partial class MainWindow : Window, IDisposable
         _clockTimer.Stop();
         _liveTileTimer.Stop();
         _statusTimer.Stop();
+        _appearanceSaveTimer.Stop();
+        SaveAppearance();
     }
 
     private static T? FindVisualAncestor<T>(DependencyObject? element) where T : DependencyObject

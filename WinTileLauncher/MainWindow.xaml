@@ -6,7 +6,7 @@
         xmlns:models="clr-namespace:WinTileLauncher.Models"
         Title="Tile10" WindowStyle="None" ResizeMode="NoResize"
         WindowStartupLocation="Manual" ShowInTaskbar="False" Topmost="True"
-        AllowsTransparency="False" Background="#081A2E" Foreground="White"
+        AllowsTransparency="False" Background="{DynamicResource GlassStrongBrush}" Foreground="White"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
         PreviewKeyDown="Window_PreviewKeyDown"
@@ -25,7 +25,7 @@
 
         <Style x:Key="ZoomResetButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#9FCFE8F8" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,4" />
@@ -42,16 +42,16 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#243E6680" />
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#4EDDF3FF" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
                                 <Setter Property="Foreground" Value="#E6F6FCFF" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#3B5B8198" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#304D7894" />
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#D9F5FCFF" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -60,8 +60,8 @@
         </Style>
 
         <Style x:Key="GlassScrollThumbStyle" TargetType="{x:Type Thumb}">
-            <Setter Property="Background" Value="#62CFEFFF" />
-            <Setter Property="BorderBrush" Value="#70F0FAFF" />
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -77,8 +77,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ThumbChrome" Property="Background" Value="#A0E4F6FF" />
-                                <Setter TargetName="ThumbChrome" Property="BorderBrush" Value="#D0F8FDFF" />
+                                <Setter TargetName="ThumbChrome" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+                                <Setter TargetName="ThumbChrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
                                 <Setter TargetName="ThumbChrome" Property="Background" Value="#D0BDEAFF" />
@@ -92,15 +92,15 @@
 
         <Style x:Key="GlassScrollBarStyle" TargetType="{x:Type ScrollBar}">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#62CFEFFF" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}" />
             <Setter Property="Width" Value="10" />
             <Setter Property="Height" Value="10" />
             <Setter Property="Opacity" Value="0.72" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ScrollBar}">
-                        <Border x:Name="Rail" Padding="1" Background="#18030F1D"
-                                BorderBrush="#2A9ECBE3" BorderThickness="1" CornerRadius="6">
+                        <Border x:Name="Rail" Padding="1" Background="{DynamicResource GlassBrush}"
+                                BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="6">
                             <Track x:Name="PART_Track" Focusable="False">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Focusable="False">
@@ -138,8 +138,8 @@
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Opacity" Value="1" />
-                                <Setter TargetName="Rail" Property="Background" Value="#30071A2D" />
-                                <Setter TargetName="Rail" Property="BorderBrush" Value="#55BCE9FF" />
+                                <Setter TargetName="Rail" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="Rail" Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -180,23 +180,23 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ItemChrome" Property="Background" Value="#265A7C96" />
-                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#3CCCEEFF" />
+                                <Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemChrome" Property="Background" Value="#48406C8A" />
-                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#9ADAF3FF" />
+                                <Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#DDF7FDFF" />
+                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsSelected" Value="True" />
                                     <Condition Property="IsMouseOver" Value="True" />
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="ItemChrome" Property="Background" Value="#604A7C9B" />
-                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="#D0EEFAFF" />
+                                <Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="ItemChrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -233,20 +233,20 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ToggleChrome" Property="Background" Value="#285B7C96" />
-                                <Setter TargetName="ToggleChrome" Property="BorderBrush" Value="#3CCDEEFF" />
+                                <Setter TargetName="ToggleChrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="ToggleChrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ToggleBox" Property="Background" Value="#B22E88B8" />
-                                <Setter TargetName="ToggleBox" Property="BorderBrush" Value="#E5EEFAFF" />
+                                <Setter TargetName="ToggleBox" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="ToggleBox" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                                 <Setter TargetName="ToggleCheck" Property="Visibility" Value="Visible" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ToggleChrome" Property="Opacity" Value="0.78" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="ToggleChrome" Property="Background" Value="#315B7C96" />
-                                <Setter TargetName="ToggleChrome" Property="BorderBrush" Value="#D8F5FCFF" />
+                                <Setter TargetName="ToggleChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="ToggleChrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -274,7 +274,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}">
                             <Grid>
                                 <Border x:Name="ActionAccent" Width="2" Height="18" CornerRadius="1"
-                                        Background="#C6DDF5FF" HorizontalAlignment="Left" Opacity="0" />
+                                        Background="{DynamicResource FocusBrush}" HorizontalAlignment="Left" Opacity="0" />
                                 <ContentPresenter Margin="5,0,0,0"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="Center" />
@@ -282,17 +282,17 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ActionChrome" Property="Background" Value="#315C819E" />
-                                <Setter TargetName="ActionChrome" Property="BorderBrush" Value="#52CDEEFF" />
+                                <Setter TargetName="ActionChrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="ActionChrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
                                 <Setter TargetName="ActionAccent" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ActionChrome" Property="Background" Value="#4B3D789C" />
+                                <Setter TargetName="ActionChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                                 <Setter TargetName="ActionChrome" Property="Opacity" Value="0.82" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="ActionChrome" Property="Background" Value="#315C819E" />
-                                <Setter TargetName="ActionChrome" Property="BorderBrush" Value="#D8F5FCFF" />
+                                <Setter TargetName="ActionChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="ActionChrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                                 <Setter TargetName="ActionAccent" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
@@ -307,7 +307,7 @@
         <Style x:Key="PowerSeparatorStyle" TargetType="{x:Type Separator}">
             <Setter Property="Margin" Value="8,5" />
             <Setter Property="Height" Value="1" />
-            <Setter Property="Background" Value="#42CDEEFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeBorderBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Separator}">
@@ -318,9 +318,9 @@
         </Style>
 
         <Style x:Key="TileContextMenuStyle" TargetType="{x:Type ContextMenu}">
-            <Setter Property="Background" Value="#F70B1D30" />
+            <Setter Property="Background" Value="{DynamicResource GlassStrongBrush}" />
             <Setter Property="Foreground" Value="#F4FAFDFF" />
-            <Setter Property="BorderBrush" Value="#668FC6E2" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="6" />
             <Setter Property="HasDropShadow" Value="True" />
@@ -373,8 +373,8 @@
                             <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False"
                                    Placement="Right" HorizontalOffset="-3" VerticalOffset="-6"
                                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
-                                <Border Padding="6" CornerRadius="9" Background="#FA0B1D30"
-                                        BorderBrush="#789BCFE7" BorderThickness="1">
+                                <Border Padding="6" CornerRadius="9" Background="{DynamicResource GlassStrongBrush}"
+                                        BorderBrush="{DynamicResource ThemeBorderStrongBrush}" BorderThickness="1">
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                                 </Border>
                             </Popup>
@@ -387,7 +387,7 @@
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
                             </Trigger>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="ItemChrome" Property="Background" Value="#3C4F7A98" />
+                                <Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ItemChrome" Property="Opacity" Value="0.42" />
@@ -403,7 +403,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Separator}">
-                        <Border Height="1" Background="#3F8FC6E2" />
+                        <Border Height="1" Background="{DynamicResource ThemeBorderBrush}" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -696,6 +696,91 @@
                 </Grid>
             </Border>
         </DataTemplate>
+        <Style x:Key="AppearanceChoiceStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="154" />
+            <Setter Property="Height" Value="78" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chrome" Background="#20102030"
+                                BorderBrush="{DynamicResource ThemeBorderStrongBrush}" BorderThickness="1"
+                                CornerRadius="9" Padding="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="36" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Border Background="{TemplateBinding Background}"
+                                        CornerRadius="6" BorderBrush="#32FFFFFF" BorderThickness="1" />
+                                <ContentPresenter Grid.Row="1" Margin="2,6,26,0"
+                                                  VerticalAlignment="Center" />
+                                <Border x:Name="CheckBadge" Grid.Row="1" Width="20" Height="20"
+                                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                        CornerRadius="10" Background="{DynamicResource AccentBrush}"
+                                        Opacity="0">
+                                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="CheckBadge" Property="Opacity" Value="1" />
+                                <Setter Property="AutomationProperties.ItemStatus" Value="已选择" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AppearanceSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="13,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Background" Value="#24172C3C" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource ThemeBorderStrongBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.42" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="LauncherRoot" RenderTransformOrigin="0.5,0.5">
@@ -718,21 +803,26 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Canvas Grid.ColumnSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+        <Canvas x:Name="AmbientDecorations" Grid.ColumnSpan="2" IsHitTestVisible="False" ClipToBounds="True">
             <Ellipse Width="940" Height="940" Canvas.Right="-270" Canvas.Top="-530"
-                     Stroke="#22C4EEFF" StrokeThickness="1">
+                     Stroke="{DynamicResource DecorationStrokeBrush}" StrokeThickness="1">
                 <Ellipse.Effect><BlurEffect Radius="2" /></Ellipse.Effect>
             </Ellipse>
             <Ellipse Width="720" Height="720" Canvas.Right="130" Canvas.Bottom="-510"
                      Stroke="#155CA6DA" StrokeThickness="1">
                 <Ellipse.Effect><BlurEffect Radius="3" /></Ellipse.Effect>
             </Ellipse>
-            <Path Data="M 780,-80 L 1160,-80 L 660,900 L 490,900 Z" Fill="#0F8FD8FF">
+            <Path Data="M 780,-80 L 1160,-80 L 660,900 L 490,900 Z" Fill="{DynamicResource DecorationGlowBrush}">
                 <Path.Effect><BlurEffect Radius="18" /></Path.Effect>
             </Path>
         </Canvas>
 
-        <Border Grid.Column="0" Background="#78101F31" BorderBrush="#24DDF3FF" BorderThickness="0,0,1,0">
+        <Border x:Name="BackgroundOverlay" Grid.ColumnSpan="2" Panel.ZIndex="1"
+                Background="#FF02070C" Opacity="0" IsHitTestVisible="False" />
+
+        <Border x:Name="NavigationRail" Grid.Column="0" Panel.ZIndex="2"
+                Background="{DynamicResource GlassBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,0,1,0">
             <Border.Effect><DropShadowEffect Color="#020912" BlurRadius="24" ShadowDepth="6" Opacity="0.28" /></Border.Effect>
             <Grid Margin="0,24,0,18">
                 <Grid.RowDefinitions>
@@ -764,19 +854,16 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2">
+                    <Button x:Name="PersonalizationButton" Content="&#xE790;" ToolTip="个性化"
+                            AutomationProperties.Name="打开个性化设置"
+                            Style="{StaticResource IconButtonStyle}" Click="Personalization_Click" />
                     <Button x:Name="PowerButton" Content="&#xE7E8;" ToolTip="电源" AutomationProperties.Name="电源选项"
                             Style="{StaticResource IconButtonStyle}" Click="Power_Click" />
                     <Popup x:Name="PowerPopup" PlacementTarget="{Binding ElementName=PowerButton}" Placement="Right"
                            AllowsTransparency="True" StaysOpen="False" Opened="Popup_Opened" Closed="Popup_Closed">
-                        <Border BorderBrush="#76DDF3FF" BorderThickness="1"
+                        <Border x:Name="PowerPopupChrome" BorderBrush="{DynamicResource ThemeBorderStrongBrush}" BorderThickness="1"
+                                Background="{DynamicResource GlassStrongBrush}"
                                 CornerRadius="12" Padding="8" Margin="9,0,0,0">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FA102A42" Offset="0" />
-                                    <GradientStop Color="#F20A1C30" Offset="0.58" />
-                                    <GradientStop Color="#FA071625" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
                             <Border.Effect><DropShadowEffect Color="#000711" BlurRadius="28" ShadowDepth="9" Opacity="0.58" /></Border.Effect>
                             <StackPanel Width="210">
                                 <StackPanel Orientation="Horizontal" Margin="10,6,8,7">
@@ -820,25 +907,26 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1">
+        <Grid Grid.Column="1" Panel.ZIndex="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="104" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="36" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="40,20,42,12">
+            <Grid Grid.Row="0" Margin="32,14,34,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="380" />
                 </Grid.ColumnDefinitions>
+                <Border Grid.ColumnSpan="2" Background="#48000000" CornerRadius="10" Margin="0,0,-10,0" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="PageTitleText" Text="开始" FontSize="32" FontWeight="Light" VerticalAlignment="Center" />
                     <TextBlock x:Name="PageSubtitleText" Text="你的空间，按你的方式排列" FontSize="13"
-                               Foreground="{StaticResource TextSecondary}" Margin="18,10,0,0" VerticalAlignment="Center" />
+                           Foreground="White" Margin="18,10,0,0" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock x:Name="DateText" Grid.Column="1" FontSize="14"
-                           Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right"
+                           Foreground="White" HorizontalAlignment="Right"
                            VerticalAlignment="Center" Margin="0,0,0,0" />
             </Grid>
 
@@ -937,7 +1025,7 @@
                 <Border x:Name="PinnedEmptyState" Panel.ZIndex="2" Visibility="Collapsed"
                         HorizontalAlignment="Center" VerticalAlignment="Center"
                         Padding="34,28" CornerRadius="14"
-                        Background="#B20A2034" BorderBrush="#4FDDF3FF" BorderThickness="1">
+                        Background="{DynamicResource GlassStrongBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1">
                     <StackPanel Width="330" HorizontalAlignment="Center">
                         <Border Width="54" Height="54" CornerRadius="27" HorizontalAlignment="Center"
                                 Background="#2E75BCE5" BorderBrush="#72DDF3FF" BorderThickness="1">
@@ -947,7 +1035,7 @@
                         <TextBlock Text="这里还没有固定的磁贴" FontSize="20" FontWeight="SemiBold"
                                    HorizontalAlignment="Center" Margin="0,18,0,7" />
                         <TextBlock Text="从所有应用中选择常用项目，把开始屏幕布置成你的工作空间。"
-                                   FontSize="13" Foreground="{StaticResource TextSecondary}" TextAlignment="Center"
+                                   FontSize="13" Foreground="{DynamicResource TextSecondary}" TextAlignment="Center"
                                    TextWrapping="Wrap" LineHeight="20" />
                         <Button Content="浏览所有应用" Style="{StaticResource PrimaryActionButtonStyle}"
                                 HorizontalAlignment="Center" Margin="0,20,0,0" Click="AllApps_Click"
@@ -959,7 +1047,7 @@
                         Width="{Binding ActualWidth, ElementName=ContentHost, Converter={StaticResource DrawerWidth}}"
                         Margin="32,0,0,8"
                         HorizontalAlignment="Left" Panel.ZIndex="10"
-                        Background="#F20A1C2E" BorderBrush="#58DDF3FF" BorderThickness="1" CornerRadius="10"
+                        Background="{DynamicResource GlassStrongBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="10"
                         Visibility="Collapsed" SizeChanged="AppsPanel_SizeChanged">
                     <Grid Margin="10,0">
                         <Grid.RowDefinitions>
@@ -970,7 +1058,7 @@
                         <Grid>
                             <TextBlock x:Name="AppsPanelTitle" Text="所有应用" FontSize="24" FontWeight="Light" VerticalAlignment="Center" Margin="8,0" />
                             <TextBlock x:Name="AppsCountText" Text="应用"
-                                       FontSize="13" Foreground="{StaticResource TextSecondary}"
+                                       FontSize="13" Foreground="{DynamicResource TextSecondary}"
                                        VerticalAlignment="Center" Margin="126,5,48,0" />
                             <Button Content="&#xE711;" Style="{StaticResource IconButtonStyle}" HorizontalAlignment="Right"
                                     Width="38" Height="38" Click="CloseApps_Click" ToolTip="关闭所有应用"
@@ -1032,13 +1120,13 @@
                                        FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"
                                        Margin="0,15,0,6" />
                             <TextBlock x:Name="EmptySearchDescription" Text="尝试更短的名称或检查拼写"
-                                       FontSize="13" Foreground="{StaticResource TextSecondary}"
+                                       FontSize="13" Foreground="{DynamicResource TextSecondary}"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Border x:Name="LoadingPanel" Background="#D00A2034" BorderBrush="#42DDF3FF" BorderThickness="1"
+                <Border x:Name="LoadingPanel" Background="{DynamicResource GlassStrongBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1"
                         CornerRadius="10" Padding="24,18"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
@@ -1048,13 +1136,14 @@
                 </Border>
             </Grid>
 
-            <Grid Grid.Row="2" Margin="38,0,38,12">
+            <Grid Grid.Row="2" Margin="30,0,30,8">
+                <Border Background="#52000000" CornerRadius="7" Margin="0,-4,0,-5" />
                 <TextBlock Text="拖动与拉伸自动吸附网格 · Alt + 拉伸可无级调节 · 拖到右侧可新建分组" FontSize="12"
-                           Foreground="#7FFFFFFF" VerticalAlignment="Bottom" />
+                           Foreground="#E6FFFFFF" VerticalAlignment="Bottom" Margin="8,0" />
                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
                     <Border x:Name="StatusToast" Visibility="Collapsed" Margin="0,0,12,-4"
                             Padding="11,7" CornerRadius="8" MaxWidth="520"
-                            Background="#E6122C42" BorderBrush="#70DDF3FF" BorderThickness="1"
+                            Background="{DynamicResource GlassStrongBrush}" BorderBrush="{DynamicResource ThemeBorderStrongBrush}" BorderThickness="1"
                             MouseEnter="StatusToast_MouseEnter" MouseLeave="StatusToast_MouseLeave">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -1091,6 +1180,178 @@
                 </StackPanel>
             </Grid>
         </Grid>
+
+        <Border x:Name="PersonalizationDismissLayer" Grid.ColumnSpan="2" Panel.ZIndex="40"
+                Visibility="Collapsed" Background="#4A02070C"
+                MouseLeftButtonDown="PersonalizationDismissLayer_MouseLeftButtonDown" />
+
+        <Border x:Name="PersonalizationPanel" Grid.Column="1" Panel.ZIndex="50"
+                Width="382" Margin="14" HorizontalAlignment="Left"
+                Visibility="Collapsed" CornerRadius="14"
+                Background="{DynamicResource GlassStrongBrush}"
+                BorderBrush="{DynamicResource ThemeBorderStrongBrush}" BorderThickness="1"
+                KeyboardNavigation.TabNavigation="Cycle" Focusable="True">
+            <Border.Effect>
+                <DropShadowEffect Color="#00050B" BlurRadius="34" ShadowDepth="12" Opacity="0.62" />
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="72" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="62" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="22,14,14,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="个性化" FontSize="22" FontWeight="SemiBold" />
+                        <TextBlock Text="外观更改会立即预览并自动保存" FontSize="12"
+                                   Foreground="{DynamicResource TextSecondary}" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="&#xE711;" Style="{StaticResource IconButtonStyle}"
+                            Width="38" Height="38" Click="ClosePersonalization_Click"
+                            ToolTip="关闭个性化设置" AutomationProperties.Name="关闭个性化设置" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" Padding="14,0,12,8"
+                              PanningMode="VerticalOnly">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource GlassScrollBarStyle}" />
+                    </ScrollViewer.Resources>
+                    <StackPanel>
+                        <TextBlock Text="主题" FontSize="13" FontWeight="SemiBold" Margin="8,8,0,5" />
+                        <TextBlock Text="配色不会覆盖单个磁贴的自定义颜色" FontSize="12"
+                                   Foreground="{DynamicResource TextSecondary}" Margin="8,0,0,5" />
+                        <UniformGrid Columns="2" HorizontalAlignment="Left">
+                            <RadioButton x:Name="OceanThemeChoice" GroupName="LauncherTheme" Tag="ocean"
+                                         Content="深海" ToolTip="清澈、沉静" AutomationProperties.Name="深海主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#0A1A2E" Offset="0" />
+                                        <GradientStop Color="#0D2A46" Offset="0.52" />
+                                        <GradientStop Color="#123D5B" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                            <RadioButton x:Name="CyanThemeChoice" GroupName="LauncherTheme" Tag="cyan"
+                                         Content="青岚" ToolTip="轻盈、通透" AutomationProperties.Name="青岚主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#071A20" Offset="0" />
+                                        <GradientStop Color="#0B3138" Offset="0.52" />
+                                        <GradientStop Color="#104C55" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                            <RadioButton x:Name="ForestThemeChoice" GroupName="LauncherTheme" Tag="forest"
+                                         Content="松林" ToolTip="自然、专注" AutomationProperties.Name="松林主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#0B1915" Offset="0" />
+                                        <GradientStop Color="#133329" Offset="0.52" />
+                                        <GradientStop Color="#1D4B3A" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                            <RadioButton x:Name="VioletThemeChoice" GroupName="LauncherTheme" Tag="violet"
+                                         Content="暮紫" ToolTip="柔和、灵感" AutomationProperties.Name="暮紫主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#151126" Offset="0" />
+                                        <GradientStop Color="#2A2148" Offset="0.52" />
+                                        <GradientStop Color="#46356A" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                            <RadioButton x:Name="SunsetThemeChoice" GroupName="LauncherTheme" Tag="sunset"
+                                         Content="暖暮" ToolTip="温暖、舒展" AutomationProperties.Name="暖暮主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#21160D" Offset="0" />
+                                        <GradientStop Color="#3B2615" Offset="0.52" />
+                                        <GradientStop Color="#55351C" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                            <RadioButton x:Name="GraphiteThemeChoice" GroupName="LauncherTheme" Tag="graphite"
+                                         Content="石墨" ToolTip="克制、沉稳" AutomationProperties.Name="石墨主题"
+                                         Style="{StaticResource AppearanceChoiceStyle}" Checked="ThemeChoice_Checked">
+                                <RadioButton.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                        <GradientStop Color="#101419" Offset="0" />
+                                        <GradientStop Color="#1A232B" Offset="0.52" />
+                                        <GradientStop Color="#2A3843" Offset="1" />
+                                    </LinearGradientBrush>
+                                </RadioButton.Background>
+                            </RadioButton>
+                        </UniformGrid>
+
+                        <TextBlock Text="背景" FontSize="13" FontWeight="SemiBold" Margin="8,18,0,8" />
+                        <Border Height="122" Margin="8,0" CornerRadius="9" ClipToBounds="True"
+                                BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1">
+                            <Grid>
+                                <Border x:Name="BackgroundPreviewTheme" />
+                                <Image x:Name="BackgroundPreviewImage" Stretch="UniformToFill" Visibility="Collapsed" />
+                                <Border x:Name="BackgroundPreviewOverlay" Background="#FF02070C" Opacity="0" />
+                                <Border VerticalAlignment="Bottom" Background="#B8000000" Padding="10,6">
+                                    <TextBlock x:Name="BackgroundStatusText" Text="使用主题背景" FontSize="12"
+                                               TextTrimming="CharacterEllipsis"
+                                               AutomationProperties.LiveSetting="Polite" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <UniformGrid Columns="3" Margin="4,9,4,0">
+                            <Button x:Name="ChooseBackgroundButton" Content="选择图片…" Margin="4" Style="{StaticResource AppearanceSecondaryButtonStyle}"
+                                    Click="ChooseBackground_Click" AutomationProperties.Name="选择自定义背景图片" />
+                            <Button Content="背景颜色" Margin="4" Style="{StaticResource AppearanceSecondaryButtonStyle}"
+                                    Click="ChooseBackgroundColor_Click" AutomationProperties.Name="选择自定义背景颜色" />
+                            <Button Content="主题背景" Margin="4" Style="{StaticResource AppearanceSecondaryButtonStyle}"
+                                    Click="UseThemeBackground_Click" AutomationProperties.Name="恢复当前主题背景" />
+                        </UniformGrid>
+
+                        <Grid Margin="8,16,8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="图片遮罩强度" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="BackgroundOverlayValueText" Grid.Column="1" Text="60%"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </Grid>
+                        <Slider x:Name="BackgroundOverlaySlider" Minimum="55" Maximum="80" Value="60"
+                                Margin="8,7,8,0" TickFrequency="1"
+                                AutomationProperties.Name="背景遮罩强度"
+                                ValueChanged="BackgroundOverlaySlider_ValueChanged" />
+                        <TextBlock Text="提高遮罩可让白色文字在明亮照片上更清晰" FontSize="11"
+                                   Foreground="{DynamicResource TextSecondary}" Margin="8,6,8,16" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="0,1,0,0">
+                    <Grid Margin="18,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="恢复默认" Style="{StaticResource AppearanceSecondaryButtonStyle}"
+                                Click="ResetAppearance_Click" AutomationProperties.Name="恢复默认外观" />
+                        <Button Grid.Column="2" Content="完成" MinWidth="92"
+                                Style="{StaticResource PrimaryActionButtonStyle}"
+                                Click="ClosePersonalization_Click" AutomationProperties.Name="完成个性化设置" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
 
         <Canvas x:Name="DragLayer" Grid.ColumnSpan="2" Panel.ZIndex="1000" IsHitTestVisible="False">
             <Border x:Name="DropSlotPreview" Visibility="Collapsed" Opacity="0.72"
