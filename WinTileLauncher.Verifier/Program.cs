@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Text.Json.Nodes;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using WinTileLauncher;
 using WinTileLauncher.Controls;
 using WinTileLauncher.Models;
@@ -33,7 +35,13 @@ var checks = new (string Name, Func<bool> Run)[]
     ("Clock typography scales with large tiles", VerifyClockTypography),
     ("Approved translucent glass brush is active", VerifyGlassBrush),
     ("Custom tile color and style survive normalization", VerifyCustomAppearance),
-    ("Tile appearance modes render distinct brushes", VerifyAppearanceBrushes)
+    ("Tile appearance modes render distinct brushes", VerifyAppearanceBrushes),
+    ("Appearance themes have unique IDs and valid colors", VerifyAppearanceThemes),
+    ("Unknown appearance choices fall back safely", VerifyAppearanceFallbacks),
+    ("Custom background colors normalize strictly", VerifyAppearanceColorNormalization),
+    ("Background overlay opacity stays in a legible range", VerifyAppearanceOverlayBounds),
+    ("Custom image paths resolve only when safe and available", VerifyAppearanceImageResolution),
+    ("Appearance settings round-trip and tolerate future fields", VerifyAppearancePersistence)
 };
 
 var passed = true;
@@ -472,6 +480,312 @@ static bool VerifyAppearanceBrushes()
            minimal is LinearGradientBrush { GradientStops.Count: 2 } minimalBrush &&
            iconOnly is LinearGradientBrush { GradientStops.Count: 2 } iconBrush &&
            minimalBrush.GradientStops[0].Color != iconBrush.GradientStops[0].Color;
+}
+
+static bool VerifyAppearanceThemes()
+{
+    static double Linear(byte channel)
+    {
+        var value = channel / 255d;
+        return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+    }
+
+    static double ContrastToWhite(string value)
+    {
+        var color = AppearanceService.ParseColor(value);
+        var luminance = 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
+        return 1.05 / (luminance + 0.05);
+    }
+
+    var themes = AppearanceService.Themes;
+    if (themes.Count != 6 ||
+        themes.Select(theme => theme.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != themes.Count ||
+        themes.Any(theme => string.IsNullOrWhiteSpace(theme.Id) ||
+                            string.IsNullOrWhiteSpace(theme.DisplayName)))
+    {
+        return false;
+    }
+
+    foreach (var theme in themes)
+    {
+        var colors = new[]
+        {
+            theme.BackgroundStart, theme.BackgroundMiddle, theme.BackgroundEnd,
+            theme.Accent, theme.AccentHover, theme.AccentPressed,
+            theme.Glass, theme.GlassStrong, theme.GlassHover,
+            theme.Border, theme.BorderStrong, theme.Focus,
+            theme.Decoration, theme.Glow
+        };
+        try
+        {
+            if (colors.Any(color => AppearanceService.ParseColor(color) == default) ||
+                new[] { theme.Accent, theme.AccentHover, theme.AccentPressed }
+                    .Any(color => ContrastToWhite(color) < 4.5) ||
+                AppearanceService.ResolveThemeId($"  {theme.Id.ToUpperInvariant()}  ") != theme.Id)
+            {
+                return false;
+            }
+
+            var background = AppearanceService.CreateThemeBackground(theme);
+            if (!background.IsFrozen || background.GradientStops.Count != 3)
+                return false;
+        }
+        catch (Exception ex) when (ex is FormatException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool VerifyAppearanceFallbacks()
+{
+    var defaults = AppearanceService.Normalize(null);
+    var unknown = AppearanceService.Normalize(new AppearanceSettings
+    {
+        ThemeId = "future-theme",
+        BackgroundMode = "video",
+        BackgroundColor = "#123456",
+        BackgroundImagePath = "  unused.png  ",
+        BackgroundOverlayOpacity = 0.5
+    });
+    var knownCaseInsensitive = AppearanceService.Normalize(new AppearanceSettings
+    {
+        ThemeId = "  CYAN  ",
+        BackgroundMode = "  IMAGE  "
+    });
+
+    return defaults.ThemeId == AppearanceDefaults.ThemeId &&
+           defaults.BackgroundMode == AppearanceDefaults.BackgroundMode &&
+           defaults.BackgroundColor == AppearanceDefaults.BackgroundColor &&
+           defaults.BackgroundOverlayOpacity == AppearanceDefaults.BackgroundOverlayOpacity &&
+           unknown.ThemeId == AppearanceDefaults.ThemeId &&
+           unknown.BackgroundMode == AppearanceService.ThemeBackgroundMode &&
+           unknown.BackgroundColor == "#123456" &&
+           unknown.BackgroundImagePath == "unused.png" &&
+           knownCaseInsensitive.ThemeId == "cyan" &&
+           knownCaseInsensitive.BackgroundMode == AppearanceService.ImageBackgroundMode &&
+           AppearanceService.ResolveTheme("not-installed").Id == AppearanceDefaults.ThemeId;
+}
+
+static bool VerifyAppearanceColorNormalization()
+{
+    var valid = new Dictionary<string, string>
+    {
+        ["#000000"] = "#000000",
+        ["#abcdef"] = "#ABCDEF",
+        ["#12Ab9f"] = "#12AB9F",
+        ["#FFFFFF"] = "#FFFFFF",
+        ["  #123456  "] = "#123456"
+    };
+    foreach (var pair in valid)
+    {
+        if (!AppearanceService.TryNormalizeHexColor(pair.Key, out var normalized) ||
+            normalized != pair.Value)
+        {
+            return false;
+        }
+    }
+
+    string?[] invalid =
+    [
+        null, string.Empty, "   ", "123456", "#12345", "#1234567",
+        "#GG0000", "#12 456", "Transparent", "red"
+    ];
+    foreach (var value in invalid)
+    {
+        if (AppearanceService.TryNormalizeHexColor(value, out var normalized) ||
+            normalized != string.Empty)
+        {
+            return false;
+        }
+    }
+
+    var normalizedFallback = AppearanceService.Normalize(new AppearanceSettings
+    {
+        BackgroundColor = "#XYZXYZ"
+    });
+    return normalizedFallback.BackgroundColor == AppearanceDefaults.BackgroundColor;
+}
+
+static bool VerifyAppearanceOverlayBounds()
+{
+    static double NormalizeOpacity(double opacity) => AppearanceService.Normalize(
+        new AppearanceSettings { BackgroundOverlayOpacity = opacity }).BackgroundOverlayOpacity;
+
+    return NormalizeOpacity(double.NaN) == AppearanceDefaults.BackgroundOverlayOpacity &&
+           NormalizeOpacity(double.PositiveInfinity) == AppearanceDefaults.BackgroundOverlayOpacity &&
+           NormalizeOpacity(double.NegativeInfinity) == AppearanceDefaults.BackgroundOverlayOpacity &&
+           NormalizeOpacity(-1) == 0.55 &&
+           NormalizeOpacity(0) == 0.55 &&
+           NormalizeOpacity(0.18) == 0.55 &&
+           NormalizeOpacity(0.55) == 0.55 &&
+           NormalizeOpacity(0.8) == 0.8 &&
+           NormalizeOpacity(1) == 0.8 &&
+           NormalizeOpacity(double.MaxValue) == 0.8;
+}
+
+static bool VerifyAppearanceImageResolution()
+{
+    var missingPath = Path.Combine(Path.GetTempPath(), $"tile10-missing-{Guid.NewGuid():N}.png");
+    var corruptPath = Path.Combine(Path.GetTempPath(), $"tile10-corrupt-{Guid.NewGuid():N}.png");
+    var supportedPaths = new[]
+    {
+        missingPath,
+        Path.ChangeExtension(missingPath, ".JPG"),
+        Path.ChangeExtension(missingPath, ".jpeg"),
+        Path.ChangeExtension(missingPath, ".BMP")
+    };
+    if (supportedPaths.Any(path => !AppearanceService.IsSupportedImagePath(path)) ||
+        AppearanceService.IsSupportedImagePath(null) ||
+        AppearanceService.IsSupportedImagePath(string.Empty) ||
+        AppearanceService.IsSupportedImagePath("relative.png") ||
+        AppearanceService.IsSupportedImagePath(Path.ChangeExtension(missingPath, ".gif")) ||
+        AppearanceService.IsSupportedImagePath("https://example.com/background.png") ||
+        AppearanceService.IsSupportedImagePath(@"\\server\share\background.png"))
+    {
+        return false;
+    }
+
+    var settings = new AppearanceSettings
+    {
+        ThemeId = "forest",
+        BackgroundMode = AppearanceService.ImageBackgroundMode,
+        BackgroundImagePath = missingPath
+    };
+    var missing = AppearanceService.ResolveBackground(settings);
+    var present = AppearanceService.ResolveBackground(settings, _ => true);
+    var unavailable = AppearanceService.ResolveBackground(settings,
+        _ => throw new IOException("simulated missing drive"));
+    var unsupported = AppearanceService.ResolveBackground(new AppearanceSettings
+    {
+        ThemeId = "violet",
+        BackgroundMode = AppearanceService.ImageBackgroundMode,
+        BackgroundImagePath = Path.ChangeExtension(missingPath, ".webp")
+    }, _ => true);
+    var imageLoaded = AppearanceService.TryLoadImage(missingPath, out var missingImage);
+    var validPath = Path.Combine(Path.GetTempPath(), $"tile10-valid-{Guid.NewGuid():N}.png");
+    var corruptLoaded = true;
+    ImageSource? corruptImage = null;
+    var validLoaded = false;
+    ImageSource? validImage = null;
+    try
+    {
+        File.WriteAllBytes(corruptPath, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        corruptLoaded = AppearanceService.TryLoadImage(corruptPath, out corruptImage);
+        File.WriteAllBytes(validPath, Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+        validLoaded = AppearanceService.TryLoadImage(validPath, out validImage);
+        if (validLoaded)
+        {
+            using var exclusive = File.Open(validPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+    }
+    finally
+    {
+        if (File.Exists(corruptPath))
+            File.Delete(corruptPath);
+        if (File.Exists(validPath))
+            File.Delete(validPath);
+    }
+
+    return missing == new BackgroundResolution(AppearanceService.ThemeBackgroundMode, "forest", true) &&
+           present == new BackgroundResolution(AppearanceService.ImageBackgroundMode, missingPath, false) &&
+           unavailable == new BackgroundResolution(AppearanceService.ThemeBackgroundMode, "forest", true) &&
+           unsupported == new BackgroundResolution(AppearanceService.ThemeBackgroundMode, "violet", true) &&
+           !imageLoaded && missingImage is null &&
+           !corruptLoaded && corruptImage is null &&
+           validLoaded && validImage is BitmapSource { PixelWidth: 1, PixelHeight: 1 };
+}
+
+static bool VerifyAppearancePersistence()
+{
+    var temporaryDirectory = Path.Combine(Path.GetTempPath(),
+        $"Tile10-Verifier-{Guid.NewGuid():N}");
+    var appearancePath = Path.Combine(temporaryDirectory, "appearance.json");
+    var backgroundsPath = Path.Combine(temporaryDirectory, "Backgrounds");
+    try
+    {
+        var imagePath = Path.Combine(temporaryDirectory, "背景 image.PNG");
+        var service = new AppearanceService(appearancePath, backgroundsPath);
+        service.Save(new AppearanceSettings
+        {
+            ThemeId = "violet",
+            BackgroundMode = AppearanceService.ImageBackgroundMode,
+            BackgroundColor = "#a13b72",
+            BackgroundImagePath = $"  {imagePath}  ",
+            BackgroundOverlayOpacity = 0.63
+        });
+
+        var firstLoad = service.Load();
+        var json = JsonNode.Parse(File.ReadAllText(appearancePath))?.AsObject();
+        if (json is null)
+            return false;
+        json["FutureSchemaVersion"] = 99;
+        json["FutureAppearance"] = new JsonObject
+        {
+            ["Mode"] = "animated",
+            ["Options"] = new JsonArray("parallax", "blur")
+        };
+        File.WriteAllText(appearancePath, json.ToJsonString());
+
+        var futureLoad = service.Load();
+        var validSource = Path.Combine(temporaryDirectory, "valid-source.png");
+        File.WriteAllBytes(validSource, Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+        var importedPath = service.ImportBackgroundImage(validSource);
+        var importedLoaded = AppearanceService.TryLoadImage(importedPath, out var importedImage);
+        using (File.Open(importedPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+        }
+
+        var corruptSource = Path.Combine(temporaryDirectory, "corrupt-source.png");
+        File.WriteAllBytes(corruptSource, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        var corruptRejected = false;
+        try
+        {
+            service.ImportBackgroundImage(corruptSource);
+        }
+        catch (InvalidDataException)
+        {
+            corruptRejected = true;
+        }
+
+        return firstLoad.Version == 1 &&
+               firstLoad.ThemeId == "violet" &&
+               firstLoad.BackgroundMode == AppearanceService.ImageBackgroundMode &&
+               firstLoad.BackgroundColor == "#A13B72" &&
+               firstLoad.BackgroundImagePath == imagePath &&
+               firstLoad.BackgroundOverlayOpacity == 0.63 &&
+               futureLoad.Version == firstLoad.Version &&
+               futureLoad.ThemeId == firstLoad.ThemeId &&
+               futureLoad.BackgroundMode == firstLoad.BackgroundMode &&
+               futureLoad.BackgroundColor == firstLoad.BackgroundColor &&
+               futureLoad.BackgroundImagePath == firstLoad.BackgroundImagePath &&
+               futureLoad.BackgroundOverlayOpacity == firstLoad.BackgroundOverlayOpacity &&
+               importedLoaded && importedImage is BitmapSource { PixelWidth: 1, PixelHeight: 1 } &&
+               corruptRejected &&
+               Directory.EnumerateFiles(backgroundsPath, "background-importing-*").Any() == false &&
+               Directory.EnumerateFiles(backgroundsPath, "background-*").Count() == 1;
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+                                  System.Text.Json.JsonException or InvalidOperationException)
+    {
+        return false;
+    }
+    finally
+    {
+        try
+        {
+            if (Directory.Exists(temporaryDirectory))
+                Directory.Delete(temporaryDirectory, true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A cleanup failure must not hide the persistence result.
+        }
+    }
 }
 
 static TileLayoutItem Tile(string id, string name, string target, string group, int order) => new()
